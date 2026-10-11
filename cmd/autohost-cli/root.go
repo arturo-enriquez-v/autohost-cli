@@ -11,6 +11,7 @@ import (
 	"autohost-cli/cmd/autohost-cli/vpn"
 	"autohost-cli/internal/adapters/catalog"
 	"autohost-cli/internal/adapters/docker"
+	"autohost-cli/internal/adapters/hypervisor"
 	"autohost-cli/internal/adapters/installed"
 	"autohost-cli/internal/adapters/tailscale"
 	appSvc "autohost-cli/internal/app"
@@ -85,8 +86,9 @@ func init() {
 	rootCmd.AddCommand(app.AppCmd(appService))
 	rootCmd.AddCommand(install.InstallCmd(appService))
 	rootCmd.AddCommand(setup.SetupCmd(&appSvc.SetupService{
-		Docker:    dockerAdapter,
-		Tailscale: tailscale.New(),
+		Docker:     dockerAdapter,
+		Tailscale:  tailscale.New(),
+		Hypervisor: hypervisor.New(),
 	}))
 	rootCmd.AddCommand(vpn.VPNCmd(&appSvc.VPNService{
 		Tailscale: tailscale.New(),
