@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Arturo (AutoHost)
+
 // Package installed provides an InstalledRepository backed by a JSON file at
 // ~/.autohost/installed.json. No database is required.
 package installed
