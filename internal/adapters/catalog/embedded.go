@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Arturo (AutoHost)
+
 // Package catalog provides a CatalogRepository backed by the embedded docker
 // templates (assets/docker/*). No database is required.
 package catalog
