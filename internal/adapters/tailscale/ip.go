@@ -4,12 +4,11 @@
 package tailscale
 
 import (
-	"os/exec"
 	"strings"
 )
 
-func TailscaleIP() (string, error) {
-	out, err := exec.Command("tailscale", "ip", "-4").Output()
+func (a *Adapter) ip() (string, error) {
+	out, err := a.runner.Output("tailscale", "ip", "-4")
 	if err != nil {
 		return "", err
 	}
@@ -18,4 +17,8 @@ func TailscaleIP() (string, error) {
 		ip = ip[:i]
 	}
 	return ip, nil
+}
+
+func TailscaleIP() (string, error) {
+	return New().IP()
 }

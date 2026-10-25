@@ -3,17 +3,16 @@
 
 package docker
 
-import (
-	"fmt"
-	"os/exec"
-)
+import "fmt"
 
-func CreateDockerNetwork() error {
-	cmd := exec.Command("sudo", "docker", "network", "inspect", "autohost_net")
-	if err := cmd.Run(); err == nil {
+func (a *Adapter) createDockerNetwork() error {
+	if err := a.runner.Run("sudo", "docker", "network", "inspect", "autohost_net"); err == nil {
 		fmt.Println("✅ La red 'autohost_net' ya existe.")
 		return nil
 	}
-	cmd = exec.Command("sudo", "docker", "network", "create", "autohost_net")
-	return cmd.Run()
+	return a.runner.Run("sudo", "docker", "network", "create", "autohost_net")
+}
+
+func CreateDockerNetwork() error {
+	return New().CreateDockerNetwork()
 }

@@ -4,18 +4,18 @@
 package tailscale
 
 import (
+	"autohost-cli/internal/platform/config"
 	"fmt"
-	"os"
-	"os/exec"
 )
 
-func LoginTailscale() error {
-	return LoginHeadscale("https://hs.autohst.dev", "")
+func (a *Adapter) login() error {
+	cfg := config.Load()
+	return a.loginHeadscale(cfg.VPNServer, "")
 }
 
-func LoginHeadscale(loginServer, authKey string) error {
+func (a *Adapter) loginHeadscale(loginServer, authKey string) error {
 	if loginServer == "" {
-		loginServer = "https://hs.autohst.dev"
+		loginServer = config.Load().VPNServer
 	}
 
 	fmt.Printf("🔐 Autenticando con Headscale/Tailscale (%s)...\n", loginServer)
@@ -25,16 +25,20 @@ func LoginHeadscale(loginServer, authKey string) error {
 		args = append(args, "--authkey", authKey)
 	}
 
-	loginCmd := exec.Command("sudo", args...)
-	loginCmd.Stdout = os.Stdout
-	loginCmd.Stderr = os.Stderr
-
-	if err := loginCmd.Run(); err != nil {
-		fmt.Println("❌ Error al conectar con Headscale/Tailscale:", err)
+	cmdArgs := append([]string{"sudo"}, args...)
+	if err := a.runner.Run(cmdArgs[0], cmdArgs[1:]...); err != nil {
+		fmt.Println("❌ Error al autenticar con Headscale/Tailscale:", err)
 		return err
 	}
 
-	fmt.Println("✅ Conectado a Headscale/Tailscale.")
+	fmt.Println("✅ Autenticado exitosamente con Headscale/Tailscale.")
 	return nil
 }
 
+func LoginTailscale() error {
+	return New().Login()
+}
+
+func LoginHeadscale(loginServer, authKey string) error {
+	return New().LoginHeadscale(loginServer, authKey)
+}

@@ -4,18 +4,24 @@
 package tailscale
 
 import (
-	"autohost-cli/utils"
+	"autohost-cli/internal/platform/providers"
 	"fmt"
 )
 
-func InstallTailscale() error {
+func (a *Adapter) install() error {
 	fmt.Println("🔐 Instalando Tailscale...")
-	if err := utils.ExecShell("curl -fsSL https://tailscale.com/install.sh | sh"); err != nil {
+	scriptURL := providers.Get().Tailscale.InstallScriptURL
+	cmd := fmt.Sprintf("curl -fsSL %s | sh", scriptURL)
+	if err := a.runner.RunShell(cmd); err != nil {
 		return fmt.Errorf("error installing Tailscale: %w", err)
 	}
 	fmt.Println("🔐 Autenticándote con Tailscale...")
-	if err := utils.ExecShell("sudo tailscale up"); err != nil {
+	if err := a.runner.RunShell("sudo tailscale up"); err != nil {
 		return fmt.Errorf("error authenticating with Tailscale: %w", err)
 	}
 	return nil
+}
+
+func InstallTailscale() error {
+	return New().Install()
 }

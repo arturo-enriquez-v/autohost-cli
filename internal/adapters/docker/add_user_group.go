@@ -4,14 +4,12 @@
 package docker
 
 import (
-	"autohost-cli/utils"
 	"fmt"
 	"os"
 	"os/user"
 )
 
-func AddUserToDockerGroup() error {
-
+func (a *Adapter) addUserToDockerGroup() error {
 	if runningInContainer() {
 		fmt.Println("⚠️  En contenedor no modifico grupos. Omite este paso.")
 		return nil
@@ -30,13 +28,17 @@ func AddUserToDockerGroup() error {
 	}
 
 	// Crea grupo si falta y agrega usuario
-	if err := utils.ExecShell(`getent group docker >/dev/null 2>&1 || sudo groupadd docker`); err != nil {
+	if err := a.runner.RunShell(`getent group docker >/dev/null 2>&1 || sudo groupadd docker`); err != nil {
 		fmt.Println("⚠️  No pude crear/verificar grupo docker:", err)
 	}
-	if err := utils.Exec("sudo", "usermod", "-aG", "docker", u); err != nil {
+	if err := a.runner.Run("sudo", "usermod", "-aG", "docker", u); err != nil {
 		fmt.Printf("⚠️  No pude agregar el usuario '%s' al grupo docker: %v\n", u, err)
 		return err
 	}
 	fmt.Printf("✅ Usuario '%s' agregado al grupo 'docker'. Cierra sesión y vuelve a entrar para aplicar cambios.\n", u)
 	return nil
+}
+
+func AddUserToDockerGroup() error {
+	return New().AddUserToDockerGroup()
 }
