@@ -4,15 +4,15 @@
 package app
 
 import (
-	"autohost-cli/internal/app"
+	"autohost-cli/internal/core/apps"
 
 	"github.com/spf13/cobra"
 )
 
-func AppCmd(svc *app.AppService) *cobra.Command {
+func AppCmd(svc *apps.AppService) *cobra.Command {
 	appCmd := &cobra.Command{
 		Use:   "app",
-		Short: "Application management",
+		Short: "Application lifecycle management",
 	}
 
 	appCmd.AddCommand(appLsCmd(svc))

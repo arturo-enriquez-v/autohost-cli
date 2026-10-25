@@ -7,17 +7,18 @@ import (
 	"autohost-cli/cmd/autohost-cli/agent"
 	"autohost-cli/cmd/autohost-cli/app"
 	"autohost-cli/cmd/autohost-cli/cc"
+	"autohost-cli/cmd/autohost-cli/cfg"
 	"autohost-cli/cmd/autohost-cli/enroll"
-	"autohost-cli/cmd/autohost-cli/install"
 	"autohost-cli/cmd/autohost-cli/setup"
 	"autohost-cli/cmd/autohost-cli/up"
 	"autohost-cli/cmd/autohost-cli/vpn"
-	"autohost-cli/internal/adapters/catalog"
 	"autohost-cli/internal/adapters/docker"
 	"autohost-cli/internal/adapters/hypervisor"
 	"autohost-cli/internal/adapters/installed"
 	"autohost-cli/internal/adapters/tailscale"
-	appSvc "autohost-cli/internal/app"
+	"autohost-cli/internal/core/apps"
+	"autohost-cli/internal/core/network"
+	"autohost-cli/internal/core/node"
 	"fmt"
 	"os"
 
@@ -75,25 +76,26 @@ func Execute() {
 func init() {
 	// Composition root: all services are constructed and injected here.
 	dockerAdapter := docker.New()
+	tailscaleAdapter := tailscale.New()
+	hypervisorAdapter := hypervisor.New()
 
-	appService := &appSvc.AppService{
+	appService := &apps.AppService{
 		Docker:    dockerAdapter,
-		Catalog:   catalog.New(),
 		Installed: installed.New(),
 	}
 
-	rootCmd.AddCommand(agent.AgentCmd(&appSvc.AgentService{}))
-	rootCmd.AddCommand(enroll.EnrollCmd(&appSvc.EnrollService{}))
-	rootCmd.AddCommand(up.UpCmd(&appSvc.UpService{}))
-	rootCmd.AddCommand(cc.CCCmd(&appSvc.CCService{}))
+	rootCmd.AddCommand(agent.AgentCmd(&node.AgentService{}))
+	rootCmd.AddCommand(enroll.EnrollCmd(&node.EnrollService{}))
+	rootCmd.AddCommand(up.UpCmd(&node.UpService{}))
+	rootCmd.AddCommand(cc.CCCmd(&apps.CCService{}))
 	rootCmd.AddCommand(app.AppCmd(appService))
-	rootCmd.AddCommand(install.InstallCmd(appService))
-	rootCmd.AddCommand(setup.SetupCmd(&appSvc.SetupService{
+	rootCmd.AddCommand(cfg.ConfigCmd())
+	rootCmd.AddCommand(setup.SetupCmd(&node.SetupService{
 		Docker:     dockerAdapter,
-		Tailscale:  tailscale.New(),
-		Hypervisor: hypervisor.New(),
+		Tailscale:  tailscaleAdapter,
+		Hypervisor: hypervisorAdapter,
 	}))
-	rootCmd.AddCommand(vpn.VPNCmd(&appSvc.VPNService{
-		Tailscale: tailscale.New(),
+	rootCmd.AddCommand(vpn.VPNCmd(&network.VPNService{
+		Tailscale: tailscaleAdapter,
 	}))
 }

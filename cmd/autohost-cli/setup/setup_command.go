@@ -4,13 +4,13 @@
 package setup
 
 import (
-	"autohost-cli/internal/app"
+	"autohost-cli/internal/core/node"
 	"fmt"
 
 	"github.com/spf13/cobra"
 )
 
-func SetupCmd(svc *app.SetupService) *cobra.Command {
+func SetupCmd(svc *node.SetupService) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "setup <provider>",
 		Short: "Instala y configura providers (docker, tailscale, hypervisor)",
@@ -35,7 +35,7 @@ Providers disponibles:
 	return cmd
 }
 
-func dockerSubCmd(svc *app.SetupService) *cobra.Command {
+func dockerSubCmd(svc *node.SetupService) *cobra.Command {
 	return &cobra.Command{
 		Use:     "docker",
 		Short:   "Instala Docker y configura la red compartida",
@@ -50,7 +50,7 @@ func dockerSubCmd(svc *app.SetupService) *cobra.Command {
 	}
 }
 
-func tailscaleSubCmd(svc *app.SetupService) *cobra.Command {
+func tailscaleSubCmd(svc *node.SetupService) *cobra.Command {
 	return &cobra.Command{
 		Use:     "tailscale",
 		Short:   "Instala Tailscale y conecta al tailnet",
@@ -65,7 +65,7 @@ func tailscaleSubCmd(svc *app.SetupService) *cobra.Command {
 	}
 }
 
-func hypervisorSubCmd(svc *app.SetupService) *cobra.Command {
+func hypervisorSubCmd(svc *node.SetupService) *cobra.Command {
 	return &cobra.Command{
 		Use:     "hypervisor",
 		Aliases: []string{"kvm", "vms"},

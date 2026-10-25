@@ -4,7 +4,7 @@
 package cc
 
 import (
-	"autohost-cli/internal/app"
+	"autohost-cli/internal/core/apps"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -16,7 +16,7 @@ import (
 // scriptNameRegexp validates script names: alphanumeric, hyphens, underscores.
 var scriptNameRegexp = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 
-func newCreateCmd(svc *app.CCService) *cobra.Command {
+func newCreateCmd(svc *apps.CCService) *cobra.Command {
 	var name, description string
 
 	cmd := &cobra.Command{
@@ -43,7 +43,7 @@ Credentials are read from /etc/autohost/config.yaml.`,
 	return cmd
 }
 
-func newListCmd(svc *app.CCService) *cobra.Command {
+func newListCmd(svc *apps.CCService) *cobra.Command {
 	return &cobra.Command{
 		Use:   "ls",
 		Short: "List custom command scripts",
