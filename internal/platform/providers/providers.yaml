@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (c) 2026 Arturo (AutoHost)
+
+docker:
+  install_script_url: "https://get.docker.com"
+  curl_packages:
+    debian: "sudo apt-get update -y && sudo apt-get install -y curl ca-certificates && sudo update-ca-certificates"
+    ubuntu: "sudo apt-get update -y && sudo apt-get install -y curl ca-certificates && sudo update-ca-certificates"
+    rhel: "sudo dnf install -y curl ca-certificates || sudo yum install -y curl ca-certificates"
+    centos: "sudo dnf install -y curl ca-certificates || sudo yum install -y curl ca-certificates"
+    rocky: "sudo dnf install -y curl ca-certificates || sudo yum install -y curl ca-certificates"
+    almalinux: "sudo dnf install -y curl ca-certificates || sudo yum install -y curl ca-certificates"
+    fedora: "sudo dnf install -y curl ca-certificates"
+    amzn: "sudo yum install -y curl ca-certificates || sudo dnf install -y curl ca-certificates"
+    alpine: "sudo apk add --no-cache curl ca-certificates && sudo update-ca-certificates"
+    suse: "sudo zypper --non-interactive install -y curl ca-certificates"
+    arch: "sudo pacman -S --noconfirm curl ca-certificates"
+
+tailscale:
+  install_script_url: "https://tailscale.com/install.sh"
+
+hypervisor:
+  packages:
+    debian: "sudo apt-get update -y && sudo apt-get install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils cloud-image-utils genisoimage"
+    ubuntu: "sudo apt-get update -y && sudo apt-get install -y qemu-kvm libvirt-daemon-system libvirt-clients bridge-utils cloud-image-utils genisoimage"
+    rhel: "sudo dnf install -y qemu-kvm libvirt libvirt-client bridge-utils edk2-ovmf genisoimage || sudo yum install -y qemu-kvm libvirt libvirt-client bridge-utils genisoimage"
+    centos: "sudo dnf install -y qemu-kvm libvirt libvirt-client bridge-utils edk2-ovmf genisoimage || sudo yum install -y qemu-kvm libvirt libvirt-client bridge-utils genisoimage"
+    fedora: "sudo dnf install -y qemu-kvm libvirt libvirt-client bridge-utils edk2-ovmf genisoimage || sudo yum install -y qemu-kvm libvirt libvirt-client bridge-utils genisoimage"
+    rocky: "sudo dnf install -y qemu-kvm libvirt libvirt-client bridge-utils edk2-ovmf genisoimage || sudo yum install -y qemu-kvm libvirt libvirt-client bridge-utils genisoimage"
+    almalinux: "sudo dnf install -y qemu-kvm libvirt libvirt-client bridge-utils edk2-ovmf genisoimage || sudo yum install -y qemu-kvm libvirt libvirt-client bridge-utils genisoimage"
+    arch: "sudo pacman -S --noconfirm qemu-full libvirt dnsmasq bridge-utils cdrtools"
+  network_xml: |
+    <network>
+      <name>default</name>
+      <forward mode='nat'/>
+      <bridge name='virbr0' stp='on' delay='0'/>
+      <ip address='192.168.122.1' netmask='255.255.255.0'>
+        <dhcp>
+          <range start='192.168.122.2' end='192.168.122.254'/>
+        </dhcp>
+      </ip>
+    </network>
+
+agent:
+  install_script_url: "https://raw.githubusercontent.com/mazapanuwu13/autohost-agent/main/scripts/install.sh"
+  repo: "mazapanuwu13/autohost-agent"
+  bin_name: "autohost-agent"
+  bin_dir: "/usr/local/bin"
