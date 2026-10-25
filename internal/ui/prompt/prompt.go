@@ -1,48 +1,47 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2026 Arturo (AutoHost)
 
-package utils
+package prompt
 
 import (
 	"bufio"
 	"fmt"
 	"net"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 )
 
-func Exec(cmd string, args ...string) error {
-	c := exec.Command(cmd, args...)
-	c.Stdout, c.Stderr = os.Stdout, os.Stderr
-	return c.Run()
-}
-func ExecShell(script string) error {
-	// bash con -e (stop on error) y -o pipefail
-	return Exec("bash", "-eo", "pipefail", "-c", script)
+const (
+	yellow = "\033[33m"
+	reset  = "\033[0m"
+)
+
+// AskInput shows a prompt and reads user input, falling back to def if empty.
+func AskInput(reader *bufio.Reader, message, def string) string {
+	fmt.Printf("%s [%s%s%s]: ", message, yellow, def, reset)
+	val, _ := reader.ReadString('\n')
+	val = strings.TrimSpace(val)
+	if val == "" {
+		return def
+	}
+	return val
 }
 
-func ExecWithDir(dir string, cmdName string, args ...string) error {
-	cmd := exec.Command(cmdName, args...)
-	cmd.Dir = dir
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
-}
-
-func Confirm(prompt string) bool {
-	fmt.Print(prompt)
+// Confirm asks a yes/no question, returning true only if user types 'y' or 'yes'.
+func Confirm(message string) bool {
+	fmt.Print(message)
 	reader := bufio.NewReader(os.Stdin)
 	input, _ := reader.ReadString('\n')
 	input = strings.ToLower(strings.TrimSpace(input))
 	return input == "y" || input == "yes"
 }
 
-func AskOption(prompt string, options []string) string {
+// AskOption prompts user with a numbered list of options and returns the chosen string.
+func AskOption(message string, options []string) string {
 	reader := bufio.NewReader(os.Stdin)
 	for {
-		fmt.Println(prompt)
+		fmt.Println(message)
 		for i, opt := range options {
 			fmt.Printf("[%d] %s\n", i+1, opt)
 		}
@@ -56,6 +55,7 @@ func AskOption(prompt string, options []string) string {
 	}
 }
 
+// ValidPort checks if portStr is a valid integer and not currently bound.
 func ValidPort(portStr string) (int, error) {
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
@@ -71,10 +71,10 @@ func ValidPort(portStr string) (int, error) {
 	return port, nil
 }
 
+// AskAppPort repeatedly prompts for a port until a valid, unbound port is entered.
 func AskAppPort(reader *bufio.Reader, message string, port string) string {
 	for {
 		port = AskInput(reader, message, port)
-		// Validar que el puerto sea un número válido y esté libre
 		if _, err := ValidPort(port); err == nil {
 			break
 		} else {
@@ -83,3 +83,4 @@ func AskAppPort(reader *bufio.Reader, message string, port string) string {
 	}
 	return port
 }
+

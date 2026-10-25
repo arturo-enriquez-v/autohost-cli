@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2026 Arturo (AutoHost)
 
-package utils
+package fs
 
 import (
 	"io"
 	"os"
 )
 
+// CopyFile copies a single file from src to dst.
 func CopyFile(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {
@@ -24,3 +25,4 @@ func CopyFile(src, dst string) error {
 	_, err = io.Copy(out, in)
 	return err
 }
+
