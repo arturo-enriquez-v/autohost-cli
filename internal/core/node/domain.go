@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2026 Arturo (AutoHost)
 
-package domain
+package node
 
 // NodeData holds information gathered from the local machine before enrollment.
 type NodeData struct {
@@ -30,3 +30,4 @@ type NodeResponse struct {
 	GRPCAddress  string `json:"grpc_address"`
 	ExpiresIn    int64  `json:"expires_in"`
 }
+

@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2026 Arturo (AutoHost)
 
-package app
+package node
 
 import (
 	"autohost-cli/internal/adapters/agentconfig"
 	"autohost-cli/internal/adapters/enrollapi"
-	"autohost-cli/internal/domain"
 	"context"
 	"fmt"
 	"net"
@@ -18,15 +17,13 @@ import (
 // EnrollService handles node enrollment with the AutoHost cloud API.
 type EnrollService struct{}
 
-// Link gathers local node data, enrolls this node with the AutoHost API using
-// the provided user token, and persists the resulting agent token to disk.
 func (s *EnrollService) Link(api, token, name string) error {
-	nd := s.gatherNodeData()
+	nd := s.GatherNodeData()
 	if name != "" {
 		nd.HostName = name
 	}
 
-	req := domain.NodeRequest{
+	req := NodeRequest{
 		EnrollToken:  strings.TrimSpace(token),
 		HostName:     strings.TrimSpace(nd.HostName),
 		IPLocal:      strings.TrimSpace(nd.IPLocal),
@@ -39,7 +36,7 @@ func (s *EnrollService) Link(api, token, name string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	var resp domain.NodeResponse
+	var resp NodeResponse
 	_, err := client.PostJSON(ctx, "/v1/enrollments/enroll", req, &resp)
 	if err != nil {
 		return fmt.Errorf("enrollment fallido: %w", err)
@@ -65,8 +62,8 @@ func (s *EnrollService) Link(api, token, name string) error {
 	return nil
 }
 
-func (s *EnrollService) gatherNodeData() *domain.NodeData {
-	nd := &domain.NodeData{}
+func (s *EnrollService) GatherNodeData() *NodeData {
+	nd := &NodeData{}
 	if out, err := exec.Command("hostname").Output(); err == nil {
 		nd.HostName = strings.TrimSpace(string(out))
 	}
@@ -76,12 +73,12 @@ func (s *EnrollService) gatherNodeData() *domain.NodeData {
 	if out, err := exec.Command("uname", "-m").Output(); err == nil {
 		nd.Arch = strings.TrimSpace(string(out))
 	}
-	nd.IPLocal = detectLocalIP()
+	nd.IPLocal = DetectLocalIP()
 	nd.VersionAgent = "0.1.0"
 	return nd
 }
 
-func detectLocalIP() string {
+func DetectLocalIP() string {
 	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
 		return "unknown"
@@ -89,3 +86,4 @@ func detectLocalIP() string {
 	defer conn.Close()
 	return conn.LocalAddr().(*net.UDPAddr).IP.String()
 }
+

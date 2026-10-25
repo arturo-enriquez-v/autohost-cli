@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2026 Arturo (AutoHost)
 
-package app
+package apps
 
 import (
 	"autohost-cli/internal/adapters/agentconfig"
@@ -19,14 +19,11 @@ import (
 const CCCommandsDir = "/var/lib/autohost/commands"
 
 // agentGroup is the system group that owns the commands directory and scripts.
-// The autohost-agent service runs under this group and needs read+execute access.
 const agentGroup = "autohost"
 
 // CCService manages custom command scripts and their registration with the AutoHost API.
 type CCService struct{}
 
-// CreateCommand creates a bash script template in CCCommandsDir and registers it
-// with the AutoHost API so it can be triggered remotely from the dashboard.
 func (s *CCService) CreateCommand(name, description string) error {
 	scriptPath := filepath.Join(CCCommandsDir, name+".sh")
 
@@ -53,7 +50,6 @@ echo "Running custom command: %s"
 # TODO: Add your commands here
 `, name, description, time.Now().Format("2006-01-02 15:04:05"), name)
 
-	// 0750: owner(root) rwx, group(autohost) r-x, others ---
 	if err := s.writeFilePrivileged(scriptPath, []byte(tmpl), 0750); err != nil {
 		return fmt.Errorf("error creando script: %w", err)
 	}
@@ -97,7 +93,6 @@ echo "Running custom command: %s"
 	return nil
 }
 
-// ListCommands returns the full paths of all .sh scripts in CCCommandsDir.
 func (s *CCService) ListCommands() ([]string, error) {
 	entries, err := os.ReadDir(CCCommandsDir)
 	if err != nil {
@@ -163,3 +158,4 @@ func (s *CCService) writeFilePrivileged(path string, data []byte, perm os.FileMo
 	}
 	return exec.Command("sudo", "chown", fmt.Sprintf("root:%s", agentGroup), path).Run()
 }
+

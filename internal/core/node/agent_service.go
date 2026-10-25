@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2026 Arturo (AutoHost)
 
-package app
+package node
 
 import (
 	"encoding/json"
@@ -11,27 +11,15 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+
+	"autohost-cli/internal/platform/providers"
 )
 
-const (
-	agentInstallScriptURL = "https://raw.githubusercontent.com/mazapanuwu13/autohost-agent/main/scripts/install.sh"
-	agentRepo             = "mazapanuwu13/autohost-agent"
-	agentBinName          = "autohost-agent"
-	agentBinDir           = "/usr/local/bin"
-)
-
-// AgentService manages installation of the AutoHost agent binary.
+// AgentService manages installation and updates of the AutoHost agent binary.
 type AgentService struct{}
 
-// Install runs the upstream install.sh script via curl | bash.
-// Accepts the same environment variables as the script:
-//
-//	VERSION          — specific release tag (e.g. v0.2.0)
-//	AUTOHOST_API_URL — API URL
-//	AUTOHOST_TOKEN   — enrollment token
-//	AUTOHOST_NODE_ID — node identifier (default: hostname)
-//	AUTOHOST_TAGS    — comma-separated tags
 func (s *AgentService) Install() error {
+	agentCfg := providers.Get().Agent
 	if _, err := exec.LookPath("curl"); err != nil {
 		return fmt.Errorf("curl no está disponible. Instálalo con: apt install curl")
 	}
@@ -42,7 +30,7 @@ func (s *AgentService) Install() error {
 	fmt.Println("📦 Instalando AutoHost Agent...")
 	fmt.Println()
 
-	cmd := exec.Command("bash", "-c", fmt.Sprintf("curl -fsSL %s | bash", agentInstallScriptURL))
+	cmd := exec.Command("bash", "-c", fmt.Sprintf("curl -fsSL %s | bash", agentCfg.InstallScriptURL))
 	cmd.Stdin = nil
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -53,10 +41,8 @@ func (s *AgentService) Install() error {
 	return nil
 }
 
-// Update downloads only the latest agent binary and restarts the systemd
-// service. Config files are left untouched.
-// Set the VERSION env var to pin a specific release (e.g. VERSION=v0.3.0).
 func (s *AgentService) Update() error {
+	agentCfg := providers.Get().Agent
 	version := os.Getenv("VERSION")
 
 	fmt.Println("🔄 Actualizando AutoHost Agent...")
@@ -64,7 +50,7 @@ func (s *AgentService) Update() error {
 	if version == "" {
 		fmt.Print("   Obteniendo última versión... ")
 		var err error
-		version, err = fetchLatestAgentTag()
+		version, err = fetchLatestAgentTag(agentCfg.Repo)
 		if err != nil {
 			return fmt.Errorf("no se pudo obtener la última versión: %w", err)
 		}
@@ -73,23 +59,23 @@ func (s *AgentService) Update() error {
 		fmt.Printf("   Versión solicitada: %s\n", version)
 	}
 
-	arch := runtime.GOARCH // "amd64" or "arm64"
-	assetName := fmt.Sprintf("%s-linux-%s", agentBinName, arch)
+	arch := runtime.GOARCH
+	assetName := fmt.Sprintf("%s-linux-%s", agentCfg.BinName, arch)
 	downloadURL := fmt.Sprintf(
 		"https://github.com/%s/releases/download/%s/%s",
-		agentRepo, version, assetName,
+		agentCfg.Repo, version, assetName,
 	)
 
 	fmt.Printf("   Descargando %s...\n", downloadURL)
 
-	tmp, err := os.CreateTemp("", agentBinName+"-*")
+	tmp, err := os.CreateTemp("", agentCfg.BinName+"-*")
 	if err != nil {
 		return fmt.Errorf("creando archivo temporal: %w", err)
 	}
 	tmpPath := tmp.Name()
 	defer os.Remove(tmpPath)
 
-	resp, err := http.Get(downloadURL) //nolint:gosec // URL built from known constants + version tag
+	resp, err := http.Get(downloadURL)
 	if err != nil {
 		return fmt.Errorf("descargando binario: %w", err)
 	}
@@ -108,9 +94,8 @@ func (s *AgentService) Update() error {
 		return fmt.Errorf("chmod binario: %w", err)
 	}
 
-	destPath := agentBinDir + "/" + agentBinName
+	destPath := agentCfg.BinDir + "/" + agentCfg.BinName
 
-	// Use sudo only if needed
 	moveCmd := buildMoveCmd(tmpPath, destPath)
 	moveCmd.Stdout = os.Stdout
 	moveCmd.Stderr = os.Stderr
@@ -120,15 +105,14 @@ func (s *AgentService) Update() error {
 
 	fmt.Printf("✅ Binario instalado en %s\n", destPath)
 
-	// Restart the systemd service if available.
 	if _, err := exec.LookPath("systemctl"); err == nil {
 		fmt.Print("🔁 Reiniciando servicio autohost-agent... ")
 
 		var restartCmd *exec.Cmd
 		if os.Geteuid() == 0 {
-			restartCmd = exec.Command("systemctl", "restart", agentBinName)
+			restartCmd = exec.Command("systemctl", "restart", agentCfg.BinName)
 		} else {
-			restartCmd = exec.Command("sudo", "systemctl", "restart", agentBinName)
+			restartCmd = exec.Command("sudo", "systemctl", "restart", agentCfg.BinName)
 		}
 		restartCmd.Stdout = os.Stdout
 		restartCmd.Stderr = os.Stderr
@@ -148,10 +132,9 @@ func (s *AgentService) Update() error {
 	return nil
 }
 
-// fetchLatestAgentTag queries the GitHub API for the latest release tag.
-func fetchLatestAgentTag() (string, error) {
-	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", agentRepo)
-	resp, err := http.Get(url) //nolint:gosec
+func fetchLatestAgentTag(repo string) (string, error) {
+	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", repo)
+	resp, err := http.Get(url)
 	if err != nil {
 		return "", err
 	}
@@ -171,11 +154,10 @@ func fetchLatestAgentTag() (string, error) {
 	return release.TagName, nil
 }
 
-// buildMoveCmd returns an mv command, prefixed with sudo if the current user
-// cannot write to the destination directory.
 func buildMoveCmd(src, dst string) *exec.Cmd {
 	if os.Geteuid() == 0 {
 		return exec.Command("mv", src, dst)
 	}
 	return exec.Command("sudo", "mv", src, dst)
 }
+

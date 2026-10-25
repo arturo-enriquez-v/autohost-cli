@@ -1,11 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2026 Arturo (AutoHost)
 
-package app
+package network
 
 import (
 	"autohost-cli/internal/adapters/agentconfig"
-	"autohost-cli/internal/ports"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -15,7 +14,7 @@ import (
 )
 
 type VPNService struct {
-	Tailscale ports.Tailscale
+	Tailscale TailscalePort
 }
 
 func (s *VPNService) Connect(loginServer, authKey string) error {
@@ -103,3 +102,4 @@ func (s *VPNService) notifyVPNStatus(ipVPN string) {
 		fmt.Printf("⚠️ Error de la API (%d) al registrar la IP VPN en Autohost.\n", resp.StatusCode)
 	}
 }
+

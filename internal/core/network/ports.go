@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2026 Arturo (AutoHost)
 
-package ports
+package network
 
-type Tailscale interface {
+type TailscalePort interface {
 	Installed() bool
 	Install() error
 	Login() error
@@ -14,6 +14,3 @@ type Tailscale interface {
 	GetMachineName() (string, error)
 }
 
-type SplitDNS interface {
-	Ensure(domain string, nameservers []string) error
-}

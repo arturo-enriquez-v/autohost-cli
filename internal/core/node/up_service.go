@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2026 Arturo (AutoHost)
 
-package app
+package node
 
 import (
+	"autohost-cli/internal/platform/config"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -15,12 +16,6 @@ import (
 	"time"
 )
 
-const DefaultCloudURL = "https://cloud.autohst.dev"
-const DefaultAPIURL = "https://api.autohst.dev"
-
-// const DefaultCloudURL = "http://192.168.101.2:3000"
-// const DefaultAPIURL = "http://192.168.101.2:8080"
-
 // UpService handles the interactive node enrollment flow (Tailscale-style).
 type UpService struct{}
 
@@ -30,38 +25,35 @@ type upCallbackResult struct {
 	err    error
 }
 
-// Up opens a browser for authentication and registers this node with the
-// AutoHost cloud. If cloudURL is empty, DefaultCloudURL is used.
-func (s *UpService) Up(cloudURL, name string) error {
+func (s *UpService) Up(cloudURL, apiURL, name string) error {
+	cfg := config.Load()
 	if cloudURL == "" {
-		cloudURL = DefaultCloudURL
+		cloudURL = cfg.CloudURL
+	}
+	if apiURL == "" {
+		apiURL = cfg.APIURL
 	}
 	cloudURL = strings.TrimRight(cloudURL, "/")
+	apiURL = strings.TrimRight(apiURL, "/")
 
-	// Gather node hostname up-front so we can include it in the auth URL.
-	nd := (&EnrollService{}).gatherNodeData()
+	nd := (&EnrollService{}).GatherNodeData()
 	if name != "" {
 		nd.HostName = name
 	}
 
-	// Generate a random state nonce to prevent CSRF on the local callback.
 	stateBytes := make([]byte, 16)
 	if _, err := rand.Read(stateBytes); err != nil {
 		return fmt.Errorf("generando state nonce: %w", err)
 	}
 	state := hex.EncodeToString(stateBytes)
 
-	// Bind to all interfaces so the callback is reachable from the host
-	// when the CLI runs inside a container or remote machine.
 	listener, err := net.Listen("tcp", "0.0.0.0:0")
 	if err != nil {
 		return fmt.Errorf("iniciando servidor local de callback: %w", err)
 	}
 	localPort := listener.Addr().(*net.TCPAddr).Port
 
-	// Determine the IP address the browser should reach for the callback.
-	// detectLocalIP uses a UDP dial trick to find the outbound interface IP.
-	callbackIP := detectLocalIP()
+	callbackIP := DetectLocalIP()
 	if callbackIP == "unknown" {
 		callbackIP = "127.0.0.1"
 	}
@@ -99,13 +91,12 @@ func (s *UpService) Up(cloudURL, name string) error {
 	go func() { _ = srv.Serve(listener) }()
 	defer srv.Close()
 
-	// Build the cloud CLI-auth URL.
 	authURL := fmt.Sprintf("%s/cli-auth?state=%s&callback=%s&node=%s&api_url=%s",
 		cloudURL,
 		url.QueryEscape(state),
 		url.QueryEscape(callbackBase),
 		url.QueryEscape(nd.HostName),
-		url.QueryEscape(DefaultAPIURL),
+		url.QueryEscape(apiURL),
 	)
 
 	fmt.Println()
@@ -126,7 +117,11 @@ func (s *UpService) Up(cloudURL, name string) error {
 		}
 		fmt.Println()
 		fmt.Println("✅ Autorización recibida. Registrando nodo...")
-		return (&EnrollService{}).Link(res.apiURL, res.token, nd.HostName)
+		finalAPI := res.apiURL
+		if finalAPI == "" {
+			finalAPI = apiURL
+		}
+		return (&EnrollService{}).Link(finalAPI, res.token, nd.HostName)
 	case <-time.After(5 * time.Minute):
 		return fmt.Errorf("tiempo de espera agotado (5 min). Vuelve a ejecutar `autohost up`")
 	}
@@ -149,3 +144,4 @@ const successHTML = `<!DOCTYPE html>
   </div>
 </body>
 </html>`
+

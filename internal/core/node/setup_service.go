@@ -1,28 +1,27 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Copyright (c) 2026 Arturo (AutoHost)
 
-package app
+package node
 
 import (
 	"autohost-cli/internal/adapters/infra"
-	"autohost-cli/internal/ports"
-	"autohost-cli/utils"
+	"autohost-cli/internal/ui/prompt"
 	"fmt"
 	"os"
 	"strings"
 )
 
 type SetupService struct {
-	Docker     ports.Docker
-	Tailscale  ports.Tailscale
-	Hypervisor ports.Hypervisor
+	Docker     DockerPort
+	Tailscale  TailscalePort
+	Hypervisor HypervisorPort
 }
 
 func (s *SetupService) SetupDocker() error {
 	autoYes := os.Getenv("CI") == "true" || strings.EqualFold(os.Getenv("ASSUME_YES"), "-y")
 
 	if !s.Docker.DockerInstalled() {
-		confirm := autoYes || utils.Confirm("Docker no está instalado. ¿Quieres instalarlo ahora? [y/N]: ")
+		confirm := autoYes || prompt.Confirm("Docker no está instalado. ¿Quieres instalarlo ahora? [y/N]: ")
 		if !confirm {
 			return fmt.Errorf("🚫 instalación cancelada por el usuario: Docker es requerido para continuar")
 		}
@@ -31,7 +30,7 @@ func (s *SetupService) SetupDocker() error {
 			return err
 		}
 
-		addGroup := autoYes || utils.Confirm("¿Deseas agregar tu usuario al grupo 'docker'? [y/N]: ")
+		addGroup := autoYes || prompt.Confirm("¿Deseas agregar tu usuario al grupo 'docker'? [y/N]: ")
 		if addGroup {
 			if err := infra.RunStep("Agregar usuario al grupo 'docker'", s.Docker.AddUserToDockerGroup); err != nil {
 				return err
@@ -58,7 +57,7 @@ func (s *SetupService) SetupTailscale() error {
 	autoYes := os.Getenv("CI") == "true" || strings.EqualFold(os.Getenv("ASSUME_YES"), "-y")
 
 	if !s.Tailscale.Installed() {
-		confirm := autoYes || utils.Confirm("Tailscale no está instalado. ¿Quieres instalarlo ahora? [y/N]: ")
+		confirm := autoYes || prompt.Confirm("Tailscale no está instalado. ¿Quieres instalarlo ahora? [y/N]: ")
 		if !confirm {
 			return fmt.Errorf("🚫 instalación cancelada por el usuario")
 		}
@@ -72,7 +71,7 @@ func (s *SetupService) SetupTailscale() error {
 	}
 
 	fmt.Println("✅ Tailscale ya está instalado.")
-	confirm := autoYes || utils.Confirm("¿Quieres autenticarte/reconectar con Tailscale? [y/N]: ")
+	confirm := autoYes || prompt.Confirm("¿Quieres autenticarte/reconectar con Tailscale? [y/N]: ")
 	if confirm {
 		if err := infra.RunStep("Conectar con Tailscale", s.Tailscale.Login); err != nil {
 			return err
@@ -91,7 +90,7 @@ func (s *SetupService) SetupHypervisor() error {
 	if !s.Hypervisor.KVMSupported() {
 		fmt.Println("⚠️  Advertencia: /dev/kvm no fue detectado en este host.")
 		fmt.Println("   La aceleración por hardware KVM puede no estar disponible o desactivada en la BIOS.")
-		proceed := autoYes || utils.Confirm("¿Deseas continuar con la instalación de todas formas? [y/N]: ")
+		proceed := autoYes || prompt.Confirm("¿Deseas continuar con la instalación de todas formas? [y/N]: ")
 		if !proceed {
 			return fmt.Errorf("🚫 instalación cancelada por el usuario")
 		}
@@ -100,7 +99,7 @@ func (s *SetupService) SetupHypervisor() error {
 	}
 
 	if !s.Hypervisor.Installed() {
-		confirm := autoYes || utils.Confirm("KVM y libvirt no están instalados. ¿Quieres instalarlos ahora? [y/N]: ")
+		confirm := autoYes || prompt.Confirm("KVM y libvirt no están instalados. ¿Quieres instalarlos ahora? [y/N]: ")
 		if !confirm {
 			return fmt.Errorf("🚫 instalación cancelada por el usuario")
 		}
@@ -128,3 +127,4 @@ func (s *SetupService) SetupHypervisor() error {
 	}
 	return nil
 }
+
