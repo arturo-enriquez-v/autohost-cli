@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Arturo (AutoHost)
+
 // Package enrollapi provides an HTTP client for the AutoHost enrollment and agent API.
 package enrollapi
 

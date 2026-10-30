@@ -1,11 +1,13 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Arturo (AutoHost)
+
 package docker
 
 import (
-	"autohost-cli/utils"
+	"autohost-cli/internal/platform/providers"
 	"bufio"
 	"fmt"
 	"os"
-	"os/exec"
 	"strings"
 )
 
@@ -14,46 +16,47 @@ type osRelease struct {
 	IDLike string
 }
 
-func Install() error {
+func (a *Adapter) install() error {
 	if runningInContainer() {
 		fmt.Println("⚠️  Detecté contenedor. No instalo Docker aquí. Usa el socket del host o dind para pruebas.")
 		return nil
 	}
-	if dockerAvailable() {
+	if a.DockerInstalled() {
 		fmt.Println("✅ Docker ya está instalado.")
 		return nil
 	}
 	fmt.Println("🔄 Instalando Docker...")
 
 	// Asegura curl
-	if err := ensureCurl(); err != nil {
+	if err := a.ensureCurl(); err != nil {
 		panic("❌ No pude instalar/ubicar curl: " + err.Error())
 	}
 
-	// Script oficial SIN pipe ciego
-	if err := utils.ExecShell(`
+	dockerCfg := providers.Get().Docker
+	installScript := fmt.Sprintf(`
 set -e
 tmp="$(mktemp)"
-curl -fsSL https://get.docker.com -o "$tmp"
+curl -fsSL %s -o "$tmp"
 sh "$tmp"
 rm -f "$tmp"
-`); err != nil {
+`, dockerCfg.InstallScriptURL)
+
+	if err := a.runner.RunShell(installScript); err != nil {
 		panic("❌ Error ejecutando el instalador de Docker: " + err.Error())
 	}
 
 	// Arrancar/enable del daemon (si hay systemd)
-	if systemctlAvailable() {
-		_ = utils.Exec("sudo", "systemctl", "enable", "--now", "docker")
+	if a.systemctlAvailable() {
+		_ = a.runner.Run("sudo", "systemctl", "enable", "--now", "docker")
 	} else {
-		// fallback best-effort
-		_ = utils.Exec("sudo", "service", "docker", "start")
+		_ = a.runner.Run("sudo", "service", "docker", "start")
 	}
 
 	// Verificar CLI + daemon
-	if err := exec.Command("sudo", "docker", "--version").Run(); err != nil {
+	if err := a.runner.Run("sudo", "docker", "--version"); err != nil {
 		panic("❌ Docker CLI no quedó instalado correctamente.")
 	}
-	if err := exec.Command("sudo", "docker", "info").Run(); err != nil {
+	if err := a.runner.Run("sudo", "docker", "info"); err != nil {
 		fmt.Println("⚠️  Docker instalado, pero el daemon no responde aún. Revisa el servicio o reinicia el host.")
 	} else {
 		fmt.Println("✅ Docker instalado y en ejecución.")
@@ -61,29 +64,16 @@ rm -f "$tmp"
 	return nil
 }
 
-func ensureCurl() error {
+func (a *Adapter) ensureCurl() error {
 	osr := readOSRelease()
-	id := osr.ID + " " + osr.IDLike
-
-	switch {
-	case strings.Contains(id, "debian") || strings.Contains(id, "ubuntu"):
-		return utils.ExecShell(`sudo apt-get update -y && sudo apt-get install -y curl ca-certificates && sudo update-ca-certificates`)
-	case strings.Contains(id, "rhel") || strings.Contains(id, "centos") || strings.Contains(id, "rocky") || strings.Contains(id, "almalinux"):
-		return utils.ExecShell(`sudo yum install -y curl ca-certificates || sudo dnf install -y curl ca-certificates`)
-	case strings.Contains(id, "fedora"):
-		return utils.ExecShell(`sudo dnf install -y curl ca-certificates`)
-	case strings.Contains(id, "amzn"): // Amazon Linux
-		return utils.ExecShell(`sudo yum install -y curl ca-certificates || sudo dnf install -y curl ca-certificates`)
-	case strings.Contains(id, "alpine"):
-		return utils.ExecShell(`sudo apk add --no-cache curl ca-certificates && sudo update-ca-certificates`)
-	case strings.Contains(id, "suse") || strings.Contains(id, "sles") || strings.Contains(id, "opensuse"):
-		return utils.ExecShell(`sudo zypper --non-interactive install -y curl ca-certificates`)
-	default:
-		return utils.Exec("which", "curl")
-	}
+	cmd := providers.Get().Docker.CurlInstallCmd(osr.ID + " " + osr.IDLike)
+	return a.runner.RunShell(cmd)
 }
 
-func systemctlAvailable() bool { return exec.Command("which", "systemctl").Run() == nil }
+func (a *Adapter) systemctlAvailable() bool {
+	_, err := a.runner.LookPath("systemctl")
+	return err == nil
+}
 
 func readOSRelease() osRelease {
 	f, err := os.Open("/etc/os-release")
@@ -110,8 +100,9 @@ func runningInContainer() bool {
 	if _, err := os.Stat("/.dockerenv"); err == nil {
 		return true
 	}
-	// opcional: variable para forzar
 	return os.Getenv("AUTOHOST_IN_CONTAINER") == "true"
 }
 
-func dockerAvailable() bool { return exec.Command("docker", "version").Run() == nil }
+func Install() error {
+	return New().Install()
+}

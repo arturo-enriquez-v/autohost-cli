@@ -43,30 +43,92 @@ release:
 
 # ===== Incus ====== #
 
-incus-run:
-	@echo "🚀 Creating Incus instance ($(INCUS_INSTANCE))..."
-	@VM_NAME="$(INCUS_INSTANCE)" bash scripts/autohost-incus.sh run
+# run-incus: build
+# 	@echo "🚀 Creating Incus instance ($(INCUS_INSTANCE))..."
+# 	@VM_NAME="$(INCUS_INSTANCE)" bash scripts/autohost-incus.sh run
 
-incus-update:
+update-incus:
 	@echo "🔄 Updating autohost binary in Incus instance ($(INCUS_INSTANCE))..."
 	@VM_NAME="$(INCUS_INSTANCE)" bash scripts/autohost-incus.sh update
 
-incus-delete:
-	@echo "🧹 Deleting Incus instance ($(INCUS_INSTANCE))..."
-	@VM_NAME="$(INCUS_INSTANCE)" bash scripts/autohost-incus.sh delete
+# delete-incus:
+# 	@echo "🧹 Deleting Incus instance ($(INCUS_INSTANCE))..."
+# 	@VM_NAME="$(INCUS_INSTANCE)" bash scripts/autohost-incus.sh delete
 
-incus-start:
-	@echo "▶️ Starting Incus instance ($(INCUS_INSTANCE))..."
-	@VM_NAME="$(INCUS_INSTANCE)" bash scripts/autohost-incus.sh start
+# start-incus:
+# 	@echo "▶️ Starting Incus instance ($(INCUS_INSTANCE))..."
+# 	@VM_NAME="$(INCUS_INSTANCE)" bash scripts/autohost-incus.sh start
 
-incus-stop:
-	@echo "⏹ Stopping Incus instance ($(INCUS_INSTANCE))..."
-	@VM_NAME="$(INCUS_INSTANCE)" bash scripts/autohost-incus.sh stop
+# stop-incus:
+# 	@echo "⏹ Stopping Incus instance ($(INCUS_INSTANCE))..."
+# 	@VM_NAME="$(INCUS_INSTANCE)" bash scripts/autohost-incus.sh stop
 
-incus-up: incus-update
-	@echo "🧪 Testing autohost up inside Incus instance ($(INCUS_INSTANCE))..."
-	@GATEWAY=$$(incus exec $(INCUS_INSTANCE) -- sh -c "ip route show default" | awk '/default/{print $$3}' | head -1); \
-	 echo "   Container gateway (host): $$GATEWAY"; \
-	 echo "   Cloud URL (browser): http://localhost:3000"; \
-	 echo "   API URL (container -> host): http://$$GATEWAY:8080"; \
-	 incus exec $(INCUS_INSTANCE) -- env AUTOHOST_CLOUD_URL="http://localhost:3000" AUTOHOST_API_URL="http://$$GATEWAY:8080" /usr/local/bin/autohost up
+# incus-up: update-incus
+# 	@echo "🧪 Testing autohost up inside Incus instance ($(INCUS_INSTANCE))..."
+# 	@GATEWAY=$$(incus exec $(INCUS_INSTANCE) -- sh -c "ip route show default" | awk '/default/{print $$3}' | head -1); \
+# 	 echo "   Container gateway (host): $$GATEWAY"; \
+# 	 echo "   Cloud URL (browser): http://localhost:3000"; \
+# 	 echo "   API URL (container -> host): http://$$GATEWAY:8080"; \
+# 	 incus exec $(INCUS_INSTANCE) -- env AUTOHOST_CLOUD_URL="http://localhost:3000" AUTOHOST_API_URL="http://$$GATEWAY:8080" /usr/local/bin/autohost up
+
+# ===== Remote Node Config (LAN) ===== #
+NODE_IP   ?= 192.168.101.33
+NODE_USER ?= arturo
+NODE_HOST ?= $(NODE_USER)@$(NODE_IP)
+NODE_NAME ?= mazapan
+HOST_IP   ?= 192.168.101.2
+API_PORT  ?= 8080
+GRPC_PORT ?= 9090
+
+.PHONY: node-update node-setup node-setup-hypervisor node-logs node-status node-shell
+
+node-update: build
+	@echo "🔨 Compilando autohost-agent..."
+	@(cd ../autohost-agent && go build -ldflags "-s -w" -o autohost-agent cmd/agent/main.go)
+	@echo "🚀 Transfiriendo binarios a $(NODE_HOST)..."
+	@scp $(BINARY_NAME) $(NODE_HOST):/tmp/autohost
+	@scp ../autohost-agent/autohost-agent $(NODE_HOST):/tmp/autohost-agent
+	@echo "📦 Instalando binarios y reiniciando agente en $(NODE_HOST)..."
+	@ssh $(NODE_HOST) "sudo install -m 0755 /tmp/autohost /usr/local/bin/autohost && \
+		sudo install -m 0755 /tmp/autohost-agent /usr/local/bin/autohost-agent && \
+		rm -f /tmp/autohost /tmp/autohost-agent && \
+		sudo systemctl restart autohost-agent"
+	@echo "✅ Binarios actualizados y servicio reiniciado en $(NODE_IP)!"
+	@ssh $(NODE_HOST) "sudo systemctl status autohost-agent --no-pager | head -n 12"
+
+node-setup: node-update
+	@echo "🔑 Generando token de enrolamiento en base de datos local..."
+	@TOKEN=$$(python3 -c "import os, base64, hashlib, subprocess; \
+		raw = os.urandom(32); \
+		plain = 'autohost-enr_' + base64.urlsafe_b64encode(raw).decode().rstrip('='); \
+		h = hashlib.sha256(plain.encode()).hexdigest(); \
+		cid = subprocess.check_output(['docker', 'ps', '-q', '-f', 'name=postgres']).decode().strip().split()[0]; \
+		subprocess.run(['docker', 'exec', '-i', cid, 'psql', '-U', 'autohost', '-d', 'autohost', '-c', \
+			f\"INSERT INTO enroll_tokens (token, user_id, expires_at) VALUES ('{h}', 'a5cd786b-6cb5-4a79-997c-efe78b0cfa24', NOW() + INTERVAL '24 hours');\"], \
+			check=True, stdout=subprocess.DEVNULL); \
+		print(plain)"); \
+	 echo "   Token generado: $$TOKEN"; \
+	 echo "🔗 Enrolando nodo $(NODE_NAME) en http://$(HOST_IP):$(API_PORT)..."; \
+	 ssh $(NODE_HOST) "sudo autohost enroll link --api http://$(HOST_IP):$(API_PORT) --token $$TOKEN --name $(NODE_NAME) && \
+		sudo sed -i 's|grpc_address:.*|grpc_address: \"$(HOST_IP):$(GRPC_PORT)\"|g' /etc/autohost/config.yaml && \
+		if ! sudo grep -q 'grpc_insecure' /etc/autohost/config.yaml; then echo 'grpc_insecure: true' | sudo tee -a /etc/autohost/config.yaml; fi && \
+		sudo systemctl daemon-reload && \
+		sudo systemctl enable --now autohost-agent && \
+		sudo systemctl restart autohost-agent"; \
+	 echo "🎉 Nodo '$(NODE_NAME)' ($(NODE_IP)) configurado y conectado a AutoHost!"; \
+	 echo "🌐 Disponible en dashboard: http://localhost:3000"
+
+node-setup-hypervisor:
+	@echo "⚡ Instalando KVM/libvirt en nodo remoto $(NODE_HOST)..."
+	@ssh $(NODE_HOST) "yes | sudo autohost setup hypervisor && sudo usermod -aG libvirt,kvm autohost && sudo sed -i 's|SupplementaryGroups=docker.*|SupplementaryGroups=docker libvirt kvm|g' /etc/systemd/system/autohost-agent.service 2>/dev/null || true && sudo systemctl daemon-reload && sudo systemctl restart autohost-agent"
+	@echo "✅ Hypervisor configurado y servicio reiniciado en $(NODE_IP)!"
+
+node-logs:
+	@ssh $(NODE_HOST) "sudo journalctl -u autohost-agent -f"
+
+node-status:
+	@ssh $(NODE_HOST) "sudo systemctl status autohost-agent"
+
+node-shell:
+	@ssh -t $(NODE_HOST) "bash -l"
+

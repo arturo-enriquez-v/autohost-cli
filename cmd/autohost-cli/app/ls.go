@@ -1,7 +1,10 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Arturo (AutoHost)
+
 package app
 
 import (
-	"autohost-cli/internal/app"
+	"autohost-cli/internal/core/apps"
 	"fmt"
 	"os"
 	"text/tabwriter"
@@ -9,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func appLsCmd(svc *app.AppService) *cobra.Command {
+func appLsCmd(svc *apps.AppService) *cobra.Command {
 	return &cobra.Command{
 		Use:   "ls",
 		Short: "List installed applications",

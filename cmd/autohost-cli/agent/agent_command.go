@@ -1,13 +1,16 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Arturo (AutoHost)
+
 package agent
 
 import (
-	"autohost-cli/internal/app"
+	"autohost-cli/internal/core/node"
 
 	"github.com/spf13/cobra"
 )
 
 // AgentCmd returns the root `autohost agent` command.
-func AgentCmd(svc *app.AgentService) *cobra.Command {
+func AgentCmd(svc *node.AgentService) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "agent",
 		Short: "Gestión del agente de AutoHost",
@@ -17,7 +20,7 @@ func AgentCmd(svc *app.AgentService) *cobra.Command {
 	return cmd
 }
 
-func newInstallCmd(svc *app.AgentService) *cobra.Command {
+func newInstallCmd(svc *node.AgentService) *cobra.Command {
 	return &cobra.Command{
 		Use:   "install",
 		Short: "Instala el agente (binario, config base y servicio systemd)",
@@ -31,7 +34,7 @@ para conectar el nodo al cloud.`,
 	}
 }
 
-func newUpdateCmd(svc *app.AgentService) *cobra.Command {
+func newUpdateCmd(svc *node.AgentService) *cobra.Command {
 	return &cobra.Command{
 		Use:   "update",
 		Short: "Actualiza el agente a la última versión disponible",

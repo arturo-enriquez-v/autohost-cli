@@ -1,23 +1,44 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Arturo (AutoHost)
+
 package tailscale
 
 import (
+	"autohost-cli/internal/platform/config"
 	"fmt"
-	"os"
-	"os/exec"
 )
 
-func LoginTailscale() error {
-	fmt.Println("🔐 Autenticando con Tailscale...")
+func (a *Adapter) login() error {
+	cfg := config.Load()
+	return a.loginHeadscale(cfg.VPNServer, "")
+}
 
-	loginCmd := exec.Command("sudo", "tailscale", "up")
-	loginCmd.Stdout = os.Stdout
-	loginCmd.Stderr = os.Stderr
+func (a *Adapter) loginHeadscale(loginServer, authKey string) error {
+	if loginServer == "" {
+		loginServer = config.Load().VPNServer
+	}
 
-	if err := loginCmd.Run(); err != nil {
-		fmt.Println("❌ Error al conectar con Tailscale:", err)
+	fmt.Printf("🔐 Autenticando con Headscale/Tailscale (%s)...\n", loginServer)
+
+	args := []string{"tailscale", "up", "--login-server", loginServer}
+	if authKey != "" {
+		args = append(args, "--authkey", authKey)
+	}
+
+	cmdArgs := append([]string{"sudo"}, args...)
+	if err := a.runner.Run(cmdArgs[0], cmdArgs[1:]...); err != nil {
+		fmt.Println("❌ Error al autenticar con Headscale/Tailscale:", err)
 		return err
 	}
 
-	fmt.Println("✅ Conectado a Tailscale.")
+	fmt.Println("✅ Autenticado exitosamente con Headscale/Tailscale.")
 	return nil
+}
+
+func LoginTailscale() error {
+	return New().Login()
+}
+
+func LoginHeadscale(loginServer, authKey string) error {
+	return New().LoginHeadscale(loginServer, authKey)
 }

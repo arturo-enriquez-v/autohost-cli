@@ -1,13 +1,16 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Arturo (AutoHost)
+
 package app
 
 import (
-	"autohost-cli/internal/app"
+	"autohost-cli/internal/core/apps"
 	"fmt"
 
 	"github.com/spf13/cobra"
 )
 
-func appStatusCmd(svc *app.AppService) *cobra.Command {
+func appStatusCmd(svc *apps.AppService) *cobra.Command {
 	return &cobra.Command{
 		Use:   "status [nombre]",
 		Short: "Muestra el estado de una aplicación",

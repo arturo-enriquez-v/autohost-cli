@@ -1,13 +1,16 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Arturo (AutoHost)
+
 package cc
 
 import (
-	"autohost-cli/internal/app"
+	"autohost-cli/internal/core/apps"
 
 	"github.com/spf13/cobra"
 )
 
 // CCCmd returns the root command for custom commands.
-func CCCmd(svc *app.CCService) *cobra.Command {
+func CCCmd(svc *apps.CCService) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cc",
 		Short: "Custom commands management",

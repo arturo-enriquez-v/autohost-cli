@@ -1,8 +1,12 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Arturo (AutoHost)
+
 // Package agentconfig manages the agent configuration file at /etc/autohost/config.yaml.
 package agentconfig
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"os/exec"
@@ -18,6 +22,7 @@ type AgentConfig struct {
 	RefreshToken string
 	ApiURL       string
 	NodeID       string
+	GRPCAddress  string
 }
 
 const configPath = "/etc/autohost/config.yaml"
@@ -26,7 +31,11 @@ const configPath = "/etc/autohost/config.yaml"
 func Load() (*AgentConfig, error) {
 	content, err := os.ReadFile(configPath)
 	if err != nil {
-		return nil, fmt.Errorf("no se pudo leer %s: %w", configPath, err)
+		if out, sudoErr := exec.Command("sudo", "cat", configPath).Output(); sudoErr == nil && len(out) > 0 {
+			content = out
+		} else {
+			return nil, fmt.Errorf("no se pudo leer %s: %w", configPath, err)
+		}
 	}
 	var raw struct {
 		APIURL     string `yaml:"api_url"`
@@ -69,15 +78,22 @@ func Save(cfg AgentConfig) error {
 		updated = regexp.MustCompile(`(?m)^api_url:.*$`).
 			ReplaceAllString(updated, fmt.Sprintf(`api_url: "%s"`, cfg.ApiURL))
 
-		// Derive ws_url and grpc_address from api_url.
+		// Derive ws_url from api_url.
 		if wsURL, err := deriveWSURL(cfg.ApiURL); err == nil {
 			updated = regexp.MustCompile(`(?m)^ws_url:.*$`).
 				ReplaceAllString(updated, fmt.Sprintf(`ws_url: "%s"`, wsURL))
 		}
-		if grpcAddr, err := deriveGRPCAddress(cfg.ApiURL); err == nil {
-			updated = regexp.MustCompile(`(?m)^grpc_address:.*$`).
-				ReplaceAllString(updated, fmt.Sprintf(`grpc_address: "%s"`, grpcAddr))
+	}
+	// Use grpc_address returned by the server; fall back to deriving it from api_url.
+	grpcAddr := CleanGRPCAddress(cfg.GRPCAddress)
+	if grpcAddr == "" && cfg.ApiURL != "" {
+		if derived, err := deriveGRPCAddress(cfg.ApiURL); err == nil {
+			grpcAddr = derived
 		}
+	}
+	if grpcAddr != "" {
+		updated = regexp.MustCompile(`(?m)^grpc_address:.*$`).
+			ReplaceAllString(updated, fmt.Sprintf(`grpc_address: "%s"`, grpcAddr))
 	}
 	if cfg.NodeID != "" {
 		updated = regexp.MustCompile(`(?m)^node_id:.*$`).
@@ -125,12 +141,48 @@ func deriveWSURL(apiURL string) (string, error) {
 	return u.String(), nil
 }
 
-// deriveGRPCAddress extracts host from the API URL and uses port 9090.
+// CleanGRPCAddress normalizes a gRPC address string to ensure it is in host:port format
+// without http:// or https:// schemes.
+func CleanGRPCAddress(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return ""
+	}
+	hasHTTPS := strings.HasPrefix(raw, "https://")
+	hasHTTP := strings.HasPrefix(raw, "http://")
+	clean := strings.TrimPrefix(raw, "https://")
+	clean = strings.TrimPrefix(clean, "http://")
+	clean = strings.TrimRight(clean, "/")
+
+	if strings.HasPrefix(clean, ":") {
+		return clean
+	}
+
+	if _, _, err := net.SplitHostPort(clean); err == nil {
+		return clean
+	}
+
+	if hasHTTPS {
+		return clean + ":443"
+	}
+	if hasHTTP {
+		return clean + ":9090"
+	}
+	if strings.Contains(clean, ".") {
+		return clean + ":443"
+	}
+	return clean + ":9090"
+}
+
+// deriveGRPCAddress extracts host from the API URL and determines appropriate port.
 func deriveGRPCAddress(apiURL string) (string, error) {
 	u, err := url.Parse(apiURL)
 	if err != nil {
 		return "", err
 	}
 	host := u.Hostname()
+	if u.Scheme == "https" {
+		return host + ":443", nil
+	}
 	return host + ":9090", nil
 }

@@ -1,5 +1,8 @@
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2026 Arturo (AutoHost)
+
 /*
-Copyright © 2025 NAME HERE <EMAIL ADDRESS>
+Copyright © 2026 NAME HERE <EMAIL ADDRESS>
 */
 package main
 
