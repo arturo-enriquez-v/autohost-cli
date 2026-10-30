@@ -4,13 +4,13 @@
 package app
 
 import (
-	"autohost-cli/internal/app"
+	"autohost-cli/internal/core/apps"
 	"fmt"
 
 	"github.com/spf13/cobra"
 )
 
-func appStartCmd(svc *app.AppService) *cobra.Command {
+func appStartCmd(svc *apps.AppService) *cobra.Command {
 	return &cobra.Command{
 		Use:   "start [nombre]",
 		Short: "Inicia una aplicación",

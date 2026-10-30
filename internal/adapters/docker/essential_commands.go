@@ -4,55 +4,49 @@
 package docker
 
 import (
-	"autohost-cli/internal/domain"
-	"autohost-cli/utils"
+	"autohost-cli/internal/core/apps"
+	"autohost-cli/internal/platform/paths"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
 
-func StopApp(app string) error {
-	ymlPath := filepath.Join(utils.GetSubdir("apps"), app, "docker-compose.yml")
-
-	return utils.ExecWithDir(filepath.Dir(ymlPath), "docker", "compose", "-f", ymlPath, "stop")
+func (a *Adapter) stopApp(app string) error {
+	ymlPath := filepath.Join(paths.GetSubdir("apps"), app, "docker-compose.yml")
+	return a.runner.RunWithDir(filepath.Dir(ymlPath), "docker", "compose", "-f", ymlPath, "stop")
 }
 
-func StartApp(app string) error {
-	ymlPath := filepath.Join(utils.GetSubdir("apps"), app, "docker-compose.yml")
+func (a *Adapter) startApp(app string) error {
+	ymlPath := filepath.Join(paths.GetSubdir("apps"), app, "docker-compose.yml")
 
-	// Validar si existe el archivo docker-compose.yml
 	if _, err := os.Stat(ymlPath); os.IsNotExist(err) {
 		return fmt.Errorf("el archivo de configuración no existe: %s", ymlPath)
 	}
 
 	fmt.Printf("🔄 Levantando aplicación '%s'...\n", app)
-
-	// Usar Exec con working dir del compose
-	return utils.ExecWithDir(filepath.Dir(ymlPath), "docker", "compose", "-f", ymlPath, "up", "-d")
+	return a.runner.RunWithDir(filepath.Dir(ymlPath), "docker", "compose", "-f", ymlPath, "up", "-d")
 }
 
-func RemoveApp(app domain.AppName) error {
+func (a *Adapter) removeApp(app apps.AppName) error {
 	if err := app.Validate(); err != nil {
 		return err
 	}
 
-	appDir := filepath.Join(utils.GetSubdir("apps"), string(app))
+	appDir := filepath.Join(paths.GetSubdir("apps"), string(app))
 	ymlPath := filepath.Join(appDir, "docker-compose.yml")
 
-	if err := utils.ExecWithDir(appDir, "docker", "compose", "-f", ymlPath, "down"); err != nil {
+	if err := a.runner.RunWithDir(appDir, "docker", "compose", "-f", ymlPath, "down"); err != nil {
 		return fmt.Errorf("failed to stop app: %w", err)
 	}
 
-	return utils.Exec("rm", "-rf", appDir)
+	return a.runner.Run("rm", "-rf", appDir)
 }
 
-func GetAppStatus(app string) (string, error) {
-	ymlPath := filepath.Join(utils.GetSubdir("apps"), app, "docker-compose.yml")
+func (a *Adapter) getAppStatus(app string) (string, error) {
+	ymlPath := filepath.Join(paths.GetSubdir("apps"), app, "docker-compose.yml")
 
-	cmd := exec.Command("docker", "compose", "-f", ymlPath, "ps", "--status=running")
-	out, err := cmd.Output()
+	out, err := a.runner.Output("docker", "compose", "-f", ymlPath, "ps", "--status=running")
 	if err != nil {
 		return "", err
 	}
@@ -61,3 +55,9 @@ func GetAppStatus(app string) (string, error) {
 	}
 	return "detenida", nil
 }
+
+// Standalone backward-compat wrappers
+func StopApp(app string) error                   { return New().StopApp(app) }
+func StartApp(app string) error                  { return New().StartApp(app) }
+func RemoveApp(app apps.AppName) error           { return New().RemoveApp(app) }
+func GetAppStatus(app string) (string, error)    { return New().GetAppStatus(app) }

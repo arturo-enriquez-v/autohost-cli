@@ -89,49 +89,42 @@ sudo systemctl start autohost-agent
 ### `autohost enroll` — Enrollment de nodos
 
 ```bash
-autohost enroll link --api <URL_API> --token <ENROLLMENT_TOKEN> [--name <nombre>]
+autohost enroll link --token <ENROLLMENT_TOKEN> [--api <URL_API>] [--name <nombre>]
 ```
 
 Enlaza el nodo actual con la cloud API. El comando:
 1. Auto-detecta hostname, IP local, OS y arquitectura
-2. Llama a `POST /v1/enrollments/enroll` con el token de enrollment
+2. Llama a `POST /v1/enrollments/enroll` con el token de enrollment (usa la API configurada por defecto o la especificada en `--api`)
 3. Guarda el `agent_token` resultante en `/etc/autohost/config.yaml`
 
-Ejemplo:
+### `autohost config` — Configuración del CLI
+
+Permite consultar y cambiar la configuración del CLI persistida en `~/.autohost/config.yaml`.
 
 ```bash
-autohost enroll link \
-  --api http://192.168.1.10:8080 \
-  --token autohost-enroll_xxxx \
-  --name mi-servidor
+# Ver configuración activa
+autohost config view
+
+# Cambiar URLs por defecto
+autohost config set api_url http://localhost:8080
+autohost config set cloud_url http://localhost:3000
+autohost config set vpn_server https://hs.autohst.dev
+
+# Obtener un valor
+autohost config get api_url
 ```
 
----
+#### Precedencia de configuración:
+1. **Flags CLI** (`--api`, `--cloud`, `--login-server`)
+2. **Variables de entorno** (`AUTOHOST_API_URL`, `AUTOHOST_CLOUD_URL`, `AUTOHOST_VPN_SERVER`)
+3. **Archivo de configuración** (`~/.autohost/config.yaml`)
+4. **Valores por defecto** (`https://api.autohst.dev`, `https://cloud.autohst.dev`, `https://hs.autohst.dev`)
 
-## Comandos en desarrollo
+### Personalización de Proveedores (`providers.yaml`)
 
-Los siguientes comandos están implementados pero no están activos en el binario actual (comentados en `root.go`). Se activarán progresivamente:
+Las recetas y URLs para instalar dependencias (`docker`, `tailscale`, `hypervisor`, `agent`) vienen embebidas en el binario por defecto (`providers.yaml`). Si necesitas personalizar scripts, repositorios o paquetes para un entorno particular o air-gapped, puedes crear un archivo de override en `~/.autohost/providers.yaml`.
 
-| Comando | Descripción |
-|---------|-------------|
-| `autohost setup` | Instala Docker, Caddy y configura el servidor |
-| `autohost app install [nombre]` | Instala una app del catálogo |
-| `autohost app ls` | Lista apps instaladas |
-| `autohost app start/stop/status/remove [nombre]` | Gestiona el ciclo de vida de una app |
-| `autohost expose app` | Expone una app via Tailscale (privado) o Cloudflare (público) |
-
-### Apps en el catálogo
-
-| App | Puerto por defecto |
-|-----|-------------------|
-| Nextcloud | 8081 |
-| BookStack | 6875 |
-| Joplin | — |
-| Excalidraw | — |
-| Navidrome | 4533 |
-| MySQL | 3306 |
-| PostgreSQL | 5432 |
-| Redis | 6379 |
+Cualquier clave definida en `~/.autohost/providers.yaml` sobreescribe de forma transparente los valores predeterminados sin requerir recompilar el CLI.
 
 ---
 
@@ -140,32 +133,43 @@ Los siguientes comandos están implementados pero no están activos en el binari
 ```
 .
 ├── cmd/autohost-cli/
-│   ├── root.go           # Punto de entrada, registro de comandos
-│   ├── agent/            # autohost agent install
-│   ├── app/              # autohost app (install, ls, start, stop, status, remove)
-│   ├── expose/           # autohost expose app
-│   ├── install/          # autohost install
-│   └── setup/            # autohost setup
+│   ├── root.go           # Punto de entrada CLI, inyección de dependencias y registro de comandos
+│   ├── agent/            # autohost agent (install, update)
+│   ├── app/              # autohost app (ls, start, stop, status, remove)
+│   ├── cc/               # autohost cc (creación y listado de scripts remotos)
+│   ├── cfg/              # autohost config (view, set, get)
+│   ├── enroll/           # autohost enroll (link de nodo con la API)
+│   ├── setup/            # autohost setup (Docker, Tailscale, KVM/QEMU)
+│   ├── up/               # autohost up (conexión interactiva rápida con Cloud)
+│   └── vpn/              # autohost vpn (connect, disconnect, logout)
 ├── internal/
-│   ├── adapters/         # Integraciones externas
-│   │   ├── caddy/
-│   │   ├── cloudflare/
-│   │   ├── coreDNS/
-│   │   ├── docker/
-│   │   ├── tailscale/
-│   │   ├── terraform/
-│   │   └── storage/      # Repositorios SQLite
-│   ├── app/              # Servicios de aplicación (AppService, ExposeService, SetupService)
-│   ├── domain/           # Modelos e interfaces de dominio
-│   ├── platform/         # DI, configuración, filesystem
-│   └── plugins/enroll/   # Plugin de enrollment de nodos
-├── assets/docker/        # Plantillas docker-compose embebidas por app
-├── utils/                # Helpers (paths, env, secrets, URLs…)
+│   ├── core/             # Bounded Contexts (dominio, puertos y servicios)
+│   │   ├── apps/         # Gestión de ciclo de vida de apps y comandos custom (cc)
+│   │   ├── node/         # Gestión de nodos, agente systemd, setup y conexión cloud (up)
+│   │   └── network/      # Conexión, desconexión y reporte de estado VPN (Headscale/Tailscale)
+│   ├── adapters/         # Adaptadores de infraestructura (con Runner inyectable)
+│   │   ├── agentconfig/  # Parseo y actualización de config.yaml del agente
+│   │   ├── docker/       # Adaptador para Docker daemon y Compose
+│   │   ├── enrollapi/    # Cliente HTTP para el API de enrollment
+│   │   ├── hypervisor/   # Verificación e instalación de virtualización KVM
+│   │   ├── infra/        # Detección de plataforma, SO, red y pasos interactivos
+│   │   ├── installed/    # Persistencia en filesystem de apps instaladas (JSON store)
+│   │   └── tailscale/    # Adaptador para gestión de Tailscale/Headscale
+│   ├── platform/         # Infraestructura base y utilidades de bajo nivel
+│   │   ├── config/       # Configuración del CLI (~/.autohost/config.yaml, env vars y defaults)
+│   │   ├── env/          # Reemplazo de variables de entorno y placeholders
+│   │   ├── exec/         # Abstracción y ejecución de comandos de sistema (Runner)
+│   │   ├── fs/           # Helpers de filesystem y copia de templates
+│   │   ├── paths/        # Gestión de rutas del sistema (~/.autohost)
+│   │   └── providers/    # Recetas centralizadas de instalación y URLs de providers (Docker, Tailscale, KVM, Agent)
+│   ├── security/         # Generación segura de claves criptográficas y secretos
+│   └── ui/               # Presentación en terminal (prompts interactivos y validaciones)
 ├── scripts/
 │   ├── install.sh        # Instalador del CLI
 │   ├── autohost-multipass.sh
 │   └── autohost-incus.sh
-└── Makefile
+├── Makefile
+└── main.go
 ```
 
 ---

@@ -4,13 +4,13 @@
 package enroll
 
 import (
-	"autohost-cli/internal/app"
+	"autohost-cli/internal/core/node"
 
 	"github.com/spf13/cobra"
 )
 
 // EnrollCmd returns the root enroll command.
-func EnrollCmd(svc *app.EnrollService) *cobra.Command {
+func EnrollCmd(svc *node.EnrollService) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "enroll",
 		Short: "Enrollment commands for AutoHost agent",

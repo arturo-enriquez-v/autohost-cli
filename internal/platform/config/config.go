@@ -4,145 +4,86 @@
 package config
 
 import (
-	"embed"
-	"errors"
+	"autohost-cli/internal/platform/paths"
 	"fmt"
+	"os"
 	"path/filepath"
-	"strconv"
-	"sync"
+	"strings"
 
-	"github.com/pelletier/go-toml/v2"
+	"gopkg.in/yaml.v3"
 )
 
-//go:embed *.toml
-var embedded embed.FS
-
-// cache en memoria para evitar reparseos
-var (
-	mu    sync.RWMutex
-	files = map[string]map[string]any{} // nombre archivo -> mapa TOML (secciones -> claves)
+const (
+	DefaultCloudURL  = "https://cloud.autohst.dev"
+	DefaultAPIURL    = "https://api.autohst.dev"
+	DefaultVPNServer = "https://hs.autohst.dev"
 )
 
-// loadFile carga y cachea un archivo TOML embebido.
-// file puede ser "urls.toml" (con o sin "config/").
-func loadFile(file string) (map[string]any, error) {
-	base := filepath.Base(file) // "urls.toml"
-	path := filepath.Join(base)
-
-	mu.RLock()
-	if m, ok := files[path]; ok {
-		mu.RUnlock()
-		return m, nil
-	}
-	mu.RUnlock()
-
-	data, err := embedded.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("no se pudo leer %s embebido: %w", path, err)
-	}
-
-	var m map[string]any
-	if err := toml.Unmarshal(data, &m); err != nil {
-		return nil, fmt.Errorf("no se pudo parsear %s: %w", path, err)
-	}
-
-	mu.Lock()
-	files[path] = m
-	mu.Unlock()
-	return m, nil
+// Config holds user-configurable preferences for the AutoHost CLI.
+type Config struct {
+	CloudURL  string `yaml:"cloud_url" json:"cloud_url"`
+	APIURL    string `yaml:"api_url" json:"api_url"`
+	VPNServer string `yaml:"vpn_server" json:"vpn_server"`
 }
 
-// Get devuelve una interfaz (any) de section/key. Útil si quieres convertir tú.
-func Get(file, section, key string) (any, error) {
-	m, err := loadFile(file)
-	if err != nil {
-		return nil, err
-	}
-	secRaw, ok := m[section]
-	if !ok {
-		return nil, fmt.Errorf("sección %q no encontrada en %q", section, file)
-	}
-	sec, ok := secRaw.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("sección %q en %q no es un objeto", section, file)
-	}
-	val, ok := sec[key]
-	if !ok {
-		return nil, fmt.Errorf("clave %q no encontrada en sección %q de %q", key, section, file)
-	}
-	return val, nil
+// ConfigFile returns the path to the CLI config file (~/.autohost/config.yaml).
+func ConfigFile() string {
+	return filepath.Join(paths.GetAutohostDir(), "config.yaml")
 }
 
-// Helpers tipados
-func GetString(file, section, key string) (string, error) {
-	v, err := Get(file, section, key)
-	if err != nil {
-		return "", err
+// Load loads the configuration following the precedence order:
+// 1. Environment variables (AUTOHOST_CLOUD_URL, AUTOHOST_API_URL, AUTOHOST_VPN_SERVER)
+// 2. ~/.autohost/config.yaml
+// 3. Hardcoded defaults
+func Load() *Config {
+	cfg := &Config{
+		CloudURL:  DefaultCloudURL,
+		APIURL:    DefaultAPIURL,
+		VPNServer: DefaultVPNServer,
 	}
-	switch t := v.(type) {
-	case string:
-		return t, nil
-	case fmt.Stringer:
-		return t.String(), nil
-	case int64: // números en TOML pueden venir como int64
-		return strconv.FormatInt(t, 10), nil
-	case float64:
-		return strconv.FormatFloat(t, 'f', -1, 64), nil
-	case bool:
-		if t {
-			return "true", nil
-		}
-		return "false", nil
-	default:
-		return "", errors.New("valor no es string convertible")
-	}
-}
 
-func GetInt(file, section, key string) (int, error) {
-	v, err := Get(file, section, key)
-	if err != nil {
-		return 0, err
-	}
-	switch t := v.(type) {
-	case int64:
-		return int(t), nil
-	case float64:
-		return int(t), nil
-	case string:
-		i, convErr := strconv.Atoi(t)
-		if convErr != nil {
-			return 0, fmt.Errorf("no se pudo convertir a int: %w", convErr)
-		}
-		return i, nil
-	default:
-		return 0, errors.New("valor no es numérico")
-	}
-}
-
-func GetBool(file, section, key string) (bool, error) {
-	v, err := Get(file, section, key)
-	if err != nil {
-		return false, err
-	}
-	switch t := v.(type) {
-	case bool:
-		return t, nil
-	case string:
-		switch t {
-		case "true", "TRUE", "1", "yes", "si", "sí":
-			return true, nil
-		case "false", "FALSE", "0", "no":
-			return false, nil
+	// 1. Archivo de configuración si existe
+	file := ConfigFile()
+	if data, err := os.ReadFile(file); err == nil {
+		var fileCfg Config
+		if err := yaml.Unmarshal(data, &fileCfg); err == nil {
+			if fileCfg.CloudURL != "" {
+				cfg.CloudURL = strings.TrimRight(fileCfg.CloudURL, "/")
+			}
+			if fileCfg.APIURL != "" {
+				cfg.APIURL = strings.TrimRight(fileCfg.APIURL, "/")
+			}
+			if fileCfg.VPNServer != "" {
+				cfg.VPNServer = strings.TrimRight(fileCfg.VPNServer, "/")
+			}
 		}
 	}
-	return false, errors.New("valor no es booleano")
+
+	// 2. Variables de entorno (tienen prioridad sobre el archivo)
+	if env := os.Getenv("AUTOHOST_CLOUD_URL"); env != "" {
+		cfg.CloudURL = strings.TrimRight(env, "/")
+	}
+	if env := os.Getenv("AUTOHOST_API_URL"); env != "" {
+		cfg.APIURL = strings.TrimRight(env, "/")
+	}
+	if env := os.Getenv("AUTOHOST_VPN_SERVER"); env != "" {
+		cfg.VPNServer = strings.TrimRight(env, "/")
+	}
+
+	return cfg
 }
 
-// Must* variantes que paniquean si falla (útiles para defaults obligatorios)
-func MustString(file, section, key string) string {
-	s, err := GetString(file, section, key)
-	if err != nil {
-		panic(err)
+// Save writes the configuration to ~/.autohost/config.yaml.
+func Save(cfg *Config) error {
+	dir := paths.GetAutohostDir()
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return fmt.Errorf("creando directorio de configuración: %w", err)
 	}
-	return s
+
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return fmt.Errorf("serializando configuración: %w", err)
+	}
+
+	return os.WriteFile(ConfigFile(), data, 0o600)
 }

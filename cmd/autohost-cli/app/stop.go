@@ -4,13 +4,13 @@
 package app
 
 import (
-	"autohost-cli/internal/app"
+	"autohost-cli/internal/core/apps"
 	"fmt"
 
 	"github.com/spf13/cobra"
 )
 
-func appStopCmd(svc *app.AppService) *cobra.Command {
+func appStopCmd(svc *apps.AppService) *cobra.Command {
 	return &cobra.Command{
 		Use:   "stop [nombre]",
 		Short: "Detiene una aplicación",

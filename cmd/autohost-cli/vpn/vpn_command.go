@@ -4,16 +4,19 @@
 package vpn
 
 import (
-	appSvc "autohost-cli/internal/app"
+	"autohost-cli/internal/core/network"
+	"autohost-cli/internal/platform/config"
 	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
 )
 
-func VPNCmd(svc *appSvc.VPNService) *cobra.Command {
+func VPNCmd(svc *network.VPNService) *cobra.Command {
 	var loginServer string
 	var authKey string
+
+	cfg := config.Load()
 
 	vpnCmd := &cobra.Command{
 		Use:   "vpn",
@@ -37,7 +40,7 @@ func VPNCmd(svc *appSvc.VPNService) *cobra.Command {
 		},
 	}
 
-	connectCmd.Flags().StringVar(&loginServer, "login-server", "https://hs.autohst.dev", "URL del servidor Headscale")
+	connectCmd.Flags().StringVar(&loginServer, "login-server", cfg.VPNServer, "URL del servidor Headscale (env: AUTOHOST_VPN_SERVER o config.yaml)")
 	connectCmd.Flags().StringVar(&authKey, "authkey", "", "Pre-auth key generada por Headscale")
 
 	disconnectCmd := &cobra.Command{
