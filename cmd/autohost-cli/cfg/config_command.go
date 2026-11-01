@@ -43,10 +43,14 @@ func viewCmd() *cobra.Command {
 
 func viewConfig() error {
 	c := config.Load()
+	vpnDisplay := c.VPNServer
+	if vpnDisplay == "" {
+		vpnDisplay = "tailscale (default)"
+	}
 	fmt.Printf("📁 Archivo de configuración: %s\n\n", config.ConfigFile())
 	fmt.Printf("  • cloud_url:  %s\n", c.CloudURL)
 	fmt.Printf("  • api_url:    %s\n", c.APIURL)
-	fmt.Printf("  • vpn_server: %s\n\n", c.VPNServer)
+	fmt.Printf("  • vpn_server: %s\n\n", vpnDisplay)
 	return nil
 }
 

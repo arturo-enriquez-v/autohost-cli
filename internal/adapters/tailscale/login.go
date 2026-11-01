@@ -18,20 +18,24 @@ func (a *Adapter) loginHeadscale(loginServer, authKey string) error {
 		loginServer = config.Load().VPNServer
 	}
 
-	fmt.Printf("🔐 Autenticando con Headscale/Tailscale (%s)...\n", loginServer)
-
-	args := []string{"tailscale", "up", "--login-server", loginServer}
+	args := []string{"tailscale", "up"}
+	if loginServer != "" {
+		fmt.Printf("🔐 Autenticando con Tailscale/Headscale (%s)...\n", loginServer)
+		args = append(args, "--login-server", loginServer)
+	} else {
+		fmt.Println("🔐 Autenticando con Tailscale...")
+	}
 	if authKey != "" {
 		args = append(args, "--authkey", authKey)
 	}
 
 	cmdArgs := append([]string{"sudo"}, args...)
 	if err := a.runner.Run(cmdArgs[0], cmdArgs[1:]...); err != nil {
-		fmt.Println("❌ Error al autenticar con Headscale/Tailscale:", err)
+		fmt.Println("❌ Error al autenticar con Tailscale:", err)
 		return err
 	}
 
-	fmt.Println("✅ Autenticado exitosamente con Headscale/Tailscale.")
+	fmt.Println("✅ Autenticado exitosamente con Tailscale.")
 	return nil
 }
 

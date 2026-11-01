@@ -7,6 +7,12 @@ import (
 	"autohost-cli/internal/adapters/agentconfig"
 	"autohost-cli/internal/adapters/enrollapi"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
 	"net"
 	"os/exec"
@@ -23,6 +29,11 @@ func (s *EnrollService) Link(api, token, name string) error {
 		nd.HostName = name
 	}
 
+	csrPEM, keyPEM, err := generateNodeCSR(nd.HostName)
+	if err != nil {
+		return fmt.Errorf("error generando CSR para mTLS: %w", err)
+	}
+
 	req := NodeRequest{
 		EnrollToken:  strings.TrimSpace(token),
 		HostName:     strings.TrimSpace(nd.HostName),
@@ -30,6 +41,7 @@ func (s *EnrollService) Link(api, token, name string) error {
 		OS:           strings.TrimSpace(nd.OS),
 		Arch:         strings.TrimSpace(nd.Arch),
 		VersionAgent: strings.TrimSpace(nd.VersionAgent),
+		CSRPEM:       csrPEM,
 	}
 
 	client := enrollapi.NewUserClient(api, token)
@@ -37,11 +49,16 @@ func (s *EnrollService) Link(api, token, name string) error {
 	defer cancel()
 
 	var resp NodeResponse
-	_, err := client.PostJSON(ctx, "/v1/enrollments/enroll", req, &resp)
+	_, err = client.PostJSON(ctx, "/v1/enrollments/enroll", req, &resp)
 	if err != nil {
 		return fmt.Errorf("enrollment fallido: %w", err)
 	}
-	fmt.Println("💾 Guardando configuración...")
+	fmt.Println("💾 Guardando configuración y certificados mTLS...")
+
+	clientKey := keyPEM
+	if resp.ClientKey != "" {
+		clientKey = resp.ClientKey
+	}
 
 	if err := agentconfig.Save(agentconfig.AgentConfig{
 		ApiToken:     resp.ApiToken,
@@ -49,6 +66,9 @@ func (s *EnrollService) Link(api, token, name string) error {
 		ApiURL:       api,
 		NodeID:       resp.NodeID,
 		GRPCAddress:  resp.GRPCAddress,
+		CACert:       resp.CACert,
+		ClientCert:   resp.ClientCert,
+		ClientKey:    clientKey,
 	}); err != nil {
 		return fmt.Errorf("error guardando configuración: %w", err)
 	}
@@ -87,3 +107,36 @@ func DetectLocalIP() string {
 	return conn.LocalAddr().(*net.UDPAddr).IP.String()
 }
 
+func generateNodeCSR(hostname string) (csrPEM string, keyPEM string, err error) {
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return "", "", err
+	}
+
+	cn := strings.TrimSpace(hostname)
+	if cn == "" {
+		cn = "autohost-node"
+	}
+
+	template := &x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName:   cn,
+			Organization: []string{"Autohost Node"},
+		},
+	}
+
+	csrDER, err := x509.CreateCertificateRequest(rand.Reader, template, priv)
+	if err != nil {
+		return "", "", err
+	}
+
+	keyDER, err := x509.MarshalECPrivateKey(priv)
+	if err != nil {
+		return "", "", err
+	}
+
+	csrBytes := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csrDER})
+	keyBytes := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: keyDER})
+
+	return string(csrBytes), string(keyBytes), nil
+}

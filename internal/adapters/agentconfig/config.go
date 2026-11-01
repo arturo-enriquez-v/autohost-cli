@@ -23,9 +23,18 @@ type AgentConfig struct {
 	ApiURL       string
 	NodeID       string
 	GRPCAddress  string
+	CACert       string
+	ClientCert   string
+	ClientKey    string
 }
 
-const configPath = "/etc/autohost/config.yaml"
+const (
+	configPath     = "/etc/autohost/config.yaml"
+	certsDir       = "/etc/autohost/certs"
+	caCertPath     = "/etc/autohost/certs/ca.crt"
+	clientCertPath = "/etc/autohost/certs/client.crt"
+	clientKeyPath  = "/etc/autohost/certs/client.key"
+)
 
 // Load reads the agent config from /etc/autohost/config.yaml.
 func Load() (*AgentConfig, error) {
@@ -86,9 +95,17 @@ func Save(cfg AgentConfig) error {
 	}
 	// Use grpc_address returned by the server; fall back to deriving it from api_url.
 	grpcAddr := CleanGRPCAddress(cfg.GRPCAddress)
-	if grpcAddr == "" && cfg.ApiURL != "" {
+	if (grpcAddr == "" || strings.HasPrefix(grpcAddr, ":")) && cfg.ApiURL != "" {
 		if derived, err := deriveGRPCAddress(cfg.ApiURL); err == nil {
-			grpcAddr = derived
+			if strings.HasPrefix(grpcAddr, ":") {
+				if h, _, err := net.SplitHostPort(derived); err == nil && h != "" {
+					grpcAddr = net.JoinHostPort(h, strings.TrimPrefix(grpcAddr, ":"))
+				} else {
+					grpcAddr = derived
+				}
+			} else {
+				grpcAddr = derived
+			}
 		}
 	}
 	if grpcAddr != "" {
@@ -98,6 +115,17 @@ func Save(cfg AgentConfig) error {
 	if cfg.NodeID != "" {
 		updated = regexp.MustCompile(`(?m)^node_id:.*$`).
 			ReplaceAllString(updated, fmt.Sprintf(`node_id: "%s"`, cfg.NodeID))
+	}
+
+	// Persist mTLS certificates if issued during enrollment.
+	if cfg.CACert != "" && cfg.ClientCert != "" && cfg.ClientKey != "" {
+		if err := saveMTLSCerts(cfg.CACert, cfg.ClientCert, cfg.ClientKey); err != nil {
+			return fmt.Errorf("error guardando certificados mTLS: %w", err)
+		}
+		updated = setOrReplaceYAMLKey(updated, "grpc_insecure", "false")
+		updated = setOrReplaceYAMLKey(updated, "grpc_ca_cert", fmt.Sprintf("%q", caCertPath))
+		updated = setOrReplaceYAMLKey(updated, "grpc_client_cert", fmt.Sprintf("%q", clientCertPath))
+		updated = setOrReplaceYAMLKey(updated, "grpc_client_key", fmt.Sprintf("%q", clientKeyPath))
 	}
 
 	if os.Geteuid() == 0 {
@@ -185,4 +213,66 @@ func deriveGRPCAddress(apiURL string) (string, error) {
 		return host + ":443", nil
 	}
 	return host + ":9090", nil
+}
+
+func setOrReplaceYAMLKey(content, key, valueExpr string) string {
+	re := regexp.MustCompile(fmt.Sprintf(`(?m)^%s:.*$`, regexp.QuoteMeta(key)))
+	line := fmt.Sprintf("%s: %s", key, valueExpr)
+	if re.MatchString(content) {
+		return re.ReplaceAllString(content, line)
+	}
+	if !strings.HasSuffix(content, "\n") {
+		content += "\n"
+	}
+	return content + line + "\n"
+}
+
+func saveMTLSCerts(caPEM, certPEM, keyPEM string) error {
+	if os.Geteuid() == 0 {
+		if err := os.MkdirAll(certsDir, 0750); err != nil {
+			return err
+		}
+		if err := os.WriteFile(caCertPath, []byte(caPEM), 0644); err != nil {
+			return err
+		}
+		if err := os.WriteFile(clientCertPath, []byte(certPEM), 0644); err != nil {
+			return err
+		}
+		if err := os.WriteFile(clientKeyPath, []byte(keyPEM), 0640); err != nil {
+			return err
+		}
+		_ = exec.Command("chown", "-R", "root:autohost", certsDir).Run()
+		_ = os.Chmod(clientKeyPath, 0640)
+		return nil
+	}
+
+	if err := exec.Command("sudo", "mkdir", "-p", certsDir).Run(); err != nil {
+		return err
+	}
+	files := []struct {
+		path string
+		data string
+		mode string
+	}{
+		{caCertPath, caPEM, "0644"},
+		{clientCertPath, certPEM, "0644"},
+		{clientKeyPath, keyPEM, "0640"},
+	}
+	for _, f := range files {
+		tmp, err := os.CreateTemp("", "autohost-cert-*")
+		if err != nil {
+			return err
+		}
+		_ = os.WriteFile(tmp.Name(), []byte(f.data), 0600)
+		tmp.Close()
+		if err := exec.Command("sudo", "cp", tmp.Name(), f.path).Run(); err != nil {
+			os.Remove(tmp.Name())
+			return err
+		}
+		os.Remove(tmp.Name())
+		_ = exec.Command("sudo", "chmod", f.mode, f.path).Run()
+	}
+	_ = exec.Command("sudo", "chown", "-R", "root:autohost", certsDir).Run()
+	_ = exec.Command("sudo", "chmod", "0750", certsDir).Run()
+	return nil
 }
