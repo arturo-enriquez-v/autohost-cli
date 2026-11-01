@@ -66,6 +66,10 @@ func (s *SetupService) SetupTailscale() error {
 			return err
 		}
 
+		if err := infra.RunStep("Conectar con Tailscale", s.Tailscale.Login); err != nil {
+			return err
+		}
+
 		fmt.Println("✅ Tailscale instalado y conectado.")
 		return nil
 	}

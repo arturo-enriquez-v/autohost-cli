@@ -32,7 +32,7 @@ func (s *VPNService) Connect(loginServer, authKey string) error {
 	ip, err := s.Tailscale.IP()
 	if err == nil && ip != "" {
 		fmt.Println()
-		fmt.Printf("📌 IP Privada Headscale asignada: %s\n", ip)
+		fmt.Printf("📌 IP Privada Tailscale asignada: %s\n", ip)
 		s.notifyVPNStatus(ip)
 	}
 

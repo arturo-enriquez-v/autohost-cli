@@ -16,7 +16,7 @@ import (
 const (
 	DefaultCloudURL  = "https://cloud.autohst.dev"
 	DefaultAPIURL    = "https://api.autohst.dev"
-	DefaultVPNServer = "https://hs.autohst.dev"
+	DefaultVPNServer = ""
 )
 
 // Config holds user-configurable preferences for the AutoHost CLI.

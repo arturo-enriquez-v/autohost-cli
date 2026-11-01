@@ -15,10 +15,6 @@ func (a *Adapter) install() error {
 	if err := a.runner.RunShell(cmd); err != nil {
 		return fmt.Errorf("error installing Tailscale: %w", err)
 	}
-	fmt.Println("🔐 Autenticándote con Tailscale...")
-	if err := a.runner.RunShell("sudo tailscale up"); err != nil {
-		return fmt.Errorf("error authenticating with Tailscale: %w", err)
-	}
 	return nil
 }
 

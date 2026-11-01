@@ -20,6 +20,7 @@ type NodeRequest struct {
 	OS           string `json:"os"`
 	Arch         string `json:"arch"`
 	VersionAgent string `json:"version_agent"`
+	CSRPEM       string `json:"csr_pem,omitempty"`
 }
 
 // NodeResponse is the API response after a successful enrollment.
@@ -29,5 +30,8 @@ type NodeResponse struct {
 	RefreshToken string `json:"refresh_token"`
 	GRPCAddress  string `json:"grpc_address"`
 	ExpiresIn    int64  `json:"expires_in"`
+	CACert       string `json:"ca_cert"`
+	ClientCert   string `json:"client_cert"`
+	ClientKey    string `json:"client_key"`
 }
 

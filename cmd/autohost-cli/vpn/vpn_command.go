@@ -20,17 +20,21 @@ func VPNCmd(svc *network.VPNService) *cobra.Command {
 
 	vpnCmd := &cobra.Command{
 		Use:   "vpn",
-		Short: "Administrar conexión a la red privada VPN (Headscale / Tailscale)",
-		Long:  `Permite conectar, desconectar o cerrar sesión en la red privada VPN administrada por Headscale.`,
+		Short: "Administrar conexión a la red privada VPN con Tailscale",
+		Long:  `Permite conectar, desconectar o cerrar sesión en la red privada VPN administrada por Tailscale (por defecto) o Headscale.`,
 	}
 
 	connectCmd := &cobra.Command{
-		Use:   "connect",
-		Short: "Conectar con Headscale usando --login-server y --authkey",
-		Example: `  # Conectar especificando la auth key:
+		Use:     "connect",
+		Aliases: []string{"up"},
+		Short:   "Conectar con Tailscale (por defecto) usando login interactivo o --authkey",
+		Example: `  # Conectar con Tailscale (interactivo):
+  autohost vpn connect
+
+  # Conectar con Tailscale especificando una auth key:
   autohost vpn connect --authkey <KEY>
 
-  # Conectar especificando servidor y auth key:
+  # Conectar con un servidor Headscale personalizado:
   autohost vpn connect --login-server https://hs.autohst.dev --authkey <KEY>`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := svc.Connect(loginServer, authKey); err != nil {
@@ -40,8 +44,8 @@ func VPNCmd(svc *network.VPNService) *cobra.Command {
 		},
 	}
 
-	connectCmd.Flags().StringVar(&loginServer, "login-server", cfg.VPNServer, "URL del servidor Headscale (env: AUTOHOST_VPN_SERVER o config.yaml)")
-	connectCmd.Flags().StringVar(&authKey, "authkey", "", "Pre-auth key generada por Headscale")
+	connectCmd.Flags().StringVar(&loginServer, "login-server", cfg.VPNServer, "URL de servidor de control personalizado (opcional, por defecto usa Tailscale)")
+	connectCmd.Flags().StringVar(&authKey, "authkey", "", "Auth key de Tailscale (opcional) o pre-auth key de Headscale")
 
 	disconnectCmd := &cobra.Command{
 		Use:     "disconnect",

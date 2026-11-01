@@ -112,3 +112,34 @@ func TestTailscaleGetMachineName(t *testing.T) {
 	}
 }
 
+func TestTailscaleLoginDefaultUsesOfficialTailscale(t *testing.T) {
+	var capturedName string
+	var capturedArgs []string
+	mock := &mockRunner{
+		runFn: func(name string, args ...string) error {
+			capturedName = name
+			capturedArgs = args
+			return nil
+		},
+	}
+
+	adapter := New(mock)
+	if err := adapter.LoginHeadscale("", "tskey-auth-123"); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if capturedName != "sudo" {
+		t.Fatalf("expected sudo, got %q", capturedName)
+	}
+	expected := []string{"tailscale", "up", "--authkey", "tskey-auth-123"}
+	if len(capturedArgs) != len(expected) {
+		t.Fatalf("expected args %v, got %v", expected, capturedArgs)
+	}
+	for i := range expected {
+		if capturedArgs[i] != expected[i] {
+			t.Fatalf("arg[%d]: expected %q, got %q", i, expected[i], capturedArgs[i])
+		}
+	}
+}
+
+
