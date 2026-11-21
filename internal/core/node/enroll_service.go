@@ -31,7 +31,7 @@ func (s *EnrollService) Link(api, token, name string) error {
 
 	csrPEM, keyPEM, err := generateNodeCSR(nd.HostName)
 	if err != nil {
-		return fmt.Errorf("error generando CSR para mTLS: %w", err)
+		return fmt.Errorf("error generating mTLS CSR: %w", err)
 	}
 
 	req := NodeRequest{
@@ -51,9 +51,9 @@ func (s *EnrollService) Link(api, token, name string) error {
 	var resp NodeResponse
 	_, err = client.PostJSON(ctx, "/v1/enrollments/enroll", req, &resp)
 	if err != nil {
-		return fmt.Errorf("enrollment fallido: %w", err)
+		return fmt.Errorf("enrollment failed: %w", err)
 	}
-	fmt.Println("💾 Guardando configuración y certificados mTLS...")
+	fmt.Println("💾 Saving configuration and mTLS certificates...")
 
 	clientKey := keyPEM
 	if resp.ClientKey != "" {
@@ -70,15 +70,15 @@ func (s *EnrollService) Link(api, token, name string) error {
 		ClientCert:   resp.ClientCert,
 		ClientKey:    clientKey,
 	}); err != nil {
-		return fmt.Errorf("error guardando configuración: %w", err)
+		return fmt.Errorf("error saving configuration: %w", err)
 	}
 
-	fmt.Println("✅ Configuración actualizada en /etc/autohost/config.yaml")
+	fmt.Println("✅ Configuration updated in /etc/autohost/config.yaml")
 	fmt.Println()
-	fmt.Println("📝 Próximos pasos:")
-	fmt.Println("  1. Habilitar servicio: sudo systemctl enable autohost-agent")
-	fmt.Println("  2. Iniciar servicio:   sudo systemctl start autohost-agent")
-	fmt.Println("  3. Verificar estado:   sudo systemctl status autohost-agent")
+	fmt.Println("📝 Next steps:")
+	fmt.Println("  1. Enable the service: sudo systemctl enable autohost-agent")
+	fmt.Println("  2. Start the service:  sudo systemctl start autohost-agent")
+	fmt.Println("  3. Check the status:  sudo systemctl status autohost-agent")
 	return nil
 }
 

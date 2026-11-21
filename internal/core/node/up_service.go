@@ -43,13 +43,13 @@ func (s *UpService) Up(cloudURL, apiURL, name string) error {
 
 	stateBytes := make([]byte, 16)
 	if _, err := rand.Read(stateBytes); err != nil {
-		return fmt.Errorf("generando state nonce: %w", err)
+		return fmt.Errorf("generating state nonce: %w", err)
 	}
 	state := hex.EncodeToString(stateBytes)
 
 	listener, err := net.Listen("tcp", "0.0.0.0:0")
 	if err != nil {
-		return fmt.Errorf("iniciando servidor local de callback: %w", err)
+		return fmt.Errorf("starting local callback server: %w", err)
 	}
 	localPort := listener.Addr().(*net.TCPAddr).Port
 
@@ -72,7 +72,7 @@ func (s *UpService) Up(cloudURL, apiURL, name string) error {
 		if receivedState != state {
 			http.Error(w, "state mismatch", http.StatusBadRequest)
 			once.Do(func() {
-				resultCh <- upCallbackResult{err: fmt.Errorf("state mismatch: posible ataque CSRF")}
+				resultCh <- upCallbackResult{err: fmt.Errorf("state mismatch: possible CSRF attack")}
 			})
 			return
 		}
@@ -100,36 +100,36 @@ func (s *UpService) Up(cloudURL, apiURL, name string) error {
 	)
 
 	fmt.Println()
-	fmt.Println("🌐 Abriendo el navegador para autorizar este nodo...")
-	fmt.Printf("   Nodo: %s\n", nd.HostName)
+	fmt.Println("🌐 Opening the browser to authorize this node...")
+	fmt.Printf("   Node: %s\n", nd.HostName)
 	fmt.Println()
 	fmt.Println("   URL:", authURL)
 	fmt.Println()
-	fmt.Println("💡 Si el navegador no se abre automáticamente, copia y pega la URL.")
+	fmt.Println("💡 If the browser does not open automatically, copy and paste the URL.")
 	fmt.Println()
 
-	fmt.Println("⏳ Esperando autorización en el navegador (5 min)...")
+	fmt.Println("⏳ Waiting for authorization in the browser (5 min)...")
 
 	select {
 	case res := <-resultCh:
 		if res.err != nil {
-			return fmt.Errorf("autorización fallida: %w", res.err)
+			return fmt.Errorf("authorization failed: %w", res.err)
 		}
 		fmt.Println()
-		fmt.Println("✅ Autorización recibida. Registrando nodo...")
+		fmt.Println("✅ Authorization received. Registering node...")
 		finalAPI := res.apiURL
 		if finalAPI == "" {
 			finalAPI = apiURL
 		}
 		return (&EnrollService{}).Link(finalAPI, res.token, nd.HostName)
 	case <-time.After(5 * time.Minute):
-		return fmt.Errorf("tiempo de espera agotado (5 min). Vuelve a ejecutar `autohost up`")
+		return fmt.Errorf("timed out after 5 min. Run `autohost up` again")
 	}
 }
 
 const successHTML = `<!DOCTYPE html>
-<html lang="es">
-<head><meta charset="UTF-8"><title>AutoHost CLI — Autorizado</title>
+<html lang="en">
+<head><meta charset="UTF-8"><title>AutoHost CLI — Authorized</title>
 <style>
   body{font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#0a0a0a;color:#e5e5e5}
   .card{text-align:center;padding:2.5rem 3rem;border:1px solid #27272a;border-radius:1rem;background:#18181b;max-width:440px}
@@ -139,8 +139,8 @@ const successHTML = `<!DOCTYPE html>
 </head>
 <body>
   <div class="card">
-    <h2>✅ Nodo autorizado</h2>
-    <p>Puedes cerrar esta ventana y volver a la terminal.</p>
+    <h2>✅ Node authorized</h2>
+    <p>You can close this window and return to the terminal.</p>
   </div>
 </body>
 </html>`

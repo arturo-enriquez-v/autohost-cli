@@ -21,19 +21,19 @@ func UpCmd(svc *node.UpService) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "up",
-		Short: "Conectar este nodo al cloud de AutoHost",
-		Long: `Abre el navegador para autenticarse en el cloud de AutoHost,
-genera un token de enrollment y registra este nodo automáticamente.
+		Short: "Connect this node to the AutoHost cloud",
+		Long: `Opens the browser to authenticate with the AutoHost cloud,
+generates an enrollment token and registers this node automatically.
 
-Similar a 'tailscale up': un solo comando para conectar el nodo.`,
-		Example: `  # Usar la nube configurada
+Similar to 'tailscale up': a single command to connect the node.`,
+		Example: `  # Use the configured cloud
   autohost up
 
-  # Usar una instancia cloud o API personalizada
+  # Use a custom cloud instance or API
   autohost up --cloud https://mycloud.example.com --api https://myapi.example.com
 
-  # Personalizar el nombre del nodo
-  autohost up --name mi-servidor`,
+  # Customize the node name
+  autohost up --name my-server`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := svc.Up(cloudURL, apiURL, name); err != nil {
 				return fmt.Errorf("autohost up: %w", err)
@@ -42,9 +42,9 @@ Similar a 'tailscale up': un solo comando para conectar el nodo.`,
 		},
 	}
 
-	cmd.Flags().StringVar(&cloudURL, "cloud", cfg.CloudURL, "URL del cloud de AutoHost (env: AUTOHOST_CLOUD_URL o config.yaml)")
-	cmd.Flags().StringVar(&apiURL, "api", cfg.APIURL, "URL de la API de AutoHost (env: AUTOHOST_API_URL o config.yaml)")
-	cmd.Flags().StringVar(&name, "name", "", "Nombre del nodo (default: hostname del sistema)")
+	cmd.Flags().StringVar(&cloudURL, "cloud", cfg.CloudURL, "AutoHost cloud URL (env: AUTOHOST_CLOUD_URL or config.yaml)")
+	cmd.Flags().StringVar(&apiURL, "api", cfg.APIURL, "AutoHost API URL (env: AUTOHOST_API_URL or config.yaml)")
+	cmd.Flags().StringVar(&name, "name", "", "Node name (default: system hostname)")
 
 	return cmd
 }

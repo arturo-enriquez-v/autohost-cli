@@ -52,13 +52,13 @@ const (
 func printBanner() {
 	fmt.Print(colorCyan + banner + colorReset)
 	fmt.Printf("    %sv%s%s  %s• %s • %s\n", colorWhite, Version, colorReset, colorGray, Date, colorReset)
-	fmt.Printf("    %sCLI para autohosting con Docker/Tailscale/Cloudflare/Caddy%s\n\n", colorGray, colorReset)
-	fmt.Printf("    Usa %sautohost --help%s para ver los comandos disponibles.\n\n", colorWhite, colorReset)
+	fmt.Printf("    %sCLI for self-hosting with Docker/Tailscale/Cloudflare/Caddy%s\n\n", colorGray, colorReset)
+	fmt.Printf("    Run %sautohost --help%s to see the available commands.\n\n", colorWhite, colorReset)
 }
 
 var rootCmd = &cobra.Command{
 	Use:     "autohost",
-	Short:   "CLI para autohosting con Docker/Tailscale/Cloudflare/Caddy",
+	Short:   "CLI for self-hosting with Docker/Tailscale/Cloudflare/Caddy",
 	Version: Version,
 	Run: func(cmd *cobra.Command, args []string) {
 		printBanner()

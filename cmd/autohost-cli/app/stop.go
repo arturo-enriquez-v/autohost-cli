@@ -12,14 +12,14 @@ import (
 
 func appStopCmd(svc *apps.AppService) *cobra.Command {
 	return &cobra.Command{
-		Use:   "stop [nombre]",
-		Short: "Detiene una aplicación",
+		Use:   "stop [name]",
+		Short: "Stop an application",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := svc.StopApp(args[0]); err != nil {
-				fmt.Printf("❌ No se pudo detener %s: %v\n", args[0], err)
+				fmt.Printf("❌ Could not stop %s: %v\n", args[0], err)
 			} else {
-				fmt.Printf("🛑 %s detenida.\n", args[0])
+				fmt.Printf("🛑 %s stopped.\n", args[0])
 			}
 			return nil
 		},

@@ -21,13 +21,13 @@ type AgentService struct{}
 func (s *AgentService) Install() error {
 	agentCfg := providers.Get().Agent
 	if _, err := exec.LookPath("curl"); err != nil {
-		return fmt.Errorf("curl no está disponible. Instálalo con: apt install curl")
+		return fmt.Errorf("curl is not available. Install it with: apt install curl")
 	}
 	if _, err := exec.LookPath("bash"); err != nil {
-		return fmt.Errorf("bash no está disponible en el sistema")
+		return fmt.Errorf("bash is not available on this system")
 	}
 
-	fmt.Println("📦 Instalando AutoHost Agent...")
+	fmt.Println("📦 Installing AutoHost Agent...")
 	fmt.Println()
 
 	cmd := exec.Command("bash", "-c", fmt.Sprintf("curl -fsSL %s | bash", agentCfg.InstallScriptURL))
@@ -36,7 +36,7 @@ func (s *AgentService) Install() error {
 	cmd.Stderr = os.Stderr
 
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("instalación del agente falló: %w", err)
+		return fmt.Errorf("agent installation failed: %w", err)
 	}
 	return nil
 }
@@ -45,18 +45,18 @@ func (s *AgentService) Update() error {
 	agentCfg := providers.Get().Agent
 	version := os.Getenv("VERSION")
 
-	fmt.Println("🔄 Actualizando AutoHost Agent...")
+	fmt.Println("🔄 Updating AutoHost Agent...")
 
 	if version == "" {
-		fmt.Print("   Obteniendo última versión... ")
+		fmt.Print("   Fetching latest version... ")
 		var err error
 		version, err = fetchLatestAgentTag(agentCfg.Repo)
 		if err != nil {
-			return fmt.Errorf("no se pudo obtener la última versión: %w", err)
+			return fmt.Errorf("could not fetch the latest version: %w", err)
 		}
 		fmt.Println(version)
 	} else {
-		fmt.Printf("   Versión solicitada: %s\n", version)
+		fmt.Printf("   Requested version: %s\n", version)
 	}
 
 	arch := runtime.GOARCH
@@ -66,32 +66,32 @@ func (s *AgentService) Update() error {
 		agentCfg.Repo, version, assetName,
 	)
 
-	fmt.Printf("   Descargando %s...\n", downloadURL)
+	fmt.Printf("   Downloading %s...\n", downloadURL)
 
 	tmp, err := os.CreateTemp("", agentCfg.BinName+"-*")
 	if err != nil {
-		return fmt.Errorf("creando archivo temporal: %w", err)
+		return fmt.Errorf("creating temp file: %w", err)
 	}
 	tmpPath := tmp.Name()
 	defer os.Remove(tmpPath)
 
 	resp, err := http.Get(downloadURL)
 	if err != nil {
-		return fmt.Errorf("descargando binario: %w", err)
+		return fmt.Errorf("downloading binary: %w", err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("descargando binario: HTTP %d", resp.StatusCode)
+		return fmt.Errorf("downloading binary: HTTP %d", resp.StatusCode)
 	}
 
 	if _, err := io.Copy(tmp, resp.Body); err != nil {
 		tmp.Close()
-		return fmt.Errorf("guardando binario: %w", err)
+		return fmt.Errorf("saving binary: %w", err)
 	}
 	tmp.Close()
 
 	if err := os.Chmod(tmpPath, 0o755); err != nil {
-		return fmt.Errorf("chmod binario: %w", err)
+		return fmt.Errorf("chmod binary: %w", err)
 	}
 
 	destPath := agentCfg.BinDir + "/" + agentCfg.BinName
@@ -100,13 +100,13 @@ func (s *AgentService) Update() error {
 	moveCmd.Stdout = os.Stdout
 	moveCmd.Stderr = os.Stderr
 	if err := moveCmd.Run(); err != nil {
-		return fmt.Errorf("instalando binario en %s: %w", destPath, err)
+		return fmt.Errorf("installing binary to %s: %w", destPath, err)
 	}
 
-	fmt.Printf("✅ Binario instalado en %s\n", destPath)
+	fmt.Printf("✅ Binary installed to %s\n", destPath)
 
 	if _, err := exec.LookPath("systemctl"); err == nil {
-		fmt.Print("🔁 Reiniciando servicio autohost-agent... ")
+		fmt.Print("🔁 Restarting autohost-agent service... ")
 
 		var restartCmd *exec.Cmd
 		if os.Geteuid() == 0 {
@@ -118,15 +118,15 @@ func (s *AgentService) Update() error {
 		restartCmd.Stderr = os.Stderr
 
 		if err := restartCmd.Run(); err != nil {
-			fmt.Printf("\n⚠️  No se pudo reiniciar el servicio: %v\n", err)
-			fmt.Println("   Reinicia manualmente: sudo systemctl restart autohost-agent")
+			fmt.Printf("\n⚠️  Could not restart the service: %v\n", err)
+			fmt.Println("   Restart it manually: sudo systemctl restart autohost-agent")
 			return nil
 		}
 
 		fmt.Println("✅")
-		fmt.Println("✅ Agente actualizado y reiniciado correctamente.")
+		fmt.Println("✅ Agent updated and restarted successfully.")
 	} else {
-		fmt.Println("✅ Agente actualizado. Reinicia el servicio para aplicar los cambios.")
+		fmt.Println("✅ Agent updated. Restart the service to apply the changes.")
 	}
 
 	return nil
@@ -149,7 +149,7 @@ func fetchLatestAgentTag(repo string) (string, error) {
 		return "", err
 	}
 	if release.TagName == "" {
-		return "", fmt.Errorf("no se encontró ningún release publicado")
+		return "", fmt.Errorf("no published release found")
 	}
 	return release.TagName, nil
 }

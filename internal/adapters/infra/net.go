@@ -23,7 +23,7 @@ func DownloadToTemp(ctx context.Context, url string) (string, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("descarga falló: %s", resp.Status)
+		return "", fmt.Errorf("download failed: %s", resp.Status)
 	}
 	tmpDir := os.TempDir()
 	tmpFile := filepath.Join(tmpDir, filepath.Base(url))

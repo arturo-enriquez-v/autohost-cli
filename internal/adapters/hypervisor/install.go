@@ -53,14 +53,14 @@ func (a *Adapter) install() error {
 	osr := readOSRelease()
 	id := strings.ToLower(osr.ID + " " + osr.IDLike)
 
-	fmt.Println("📦 Instalando paquetes de KVM y libvirt...")
+	fmt.Println("📦 Installing KVM and libvirt packages...")
 	installScript, err := providers.Get().Hypervisor.PackageInstallCmd(id)
 	if err != nil {
 		return err
 	}
 
 	if err := a.runner.RunShell(installScript); err != nil {
-		return fmt.Errorf("error instalando paquetes de virtualización: %w", err)
+		return fmt.Errorf("error installing virtualization packages: %w", err)
 	}
 
 	_ = a.runner.RunShell("sudo systemctl enable --now libvirtd 2>/dev/null || sudo systemctl enable --now virtqemud 2>/dev/null || sudo service libvirtd start 2>/dev/null || true")
@@ -75,26 +75,26 @@ func (a *Adapter) addUserToLibvirtGroup() error {
 		u = current.Username
 	}
 	if u == "" || u == "root" {
-		fmt.Println("ℹ️  Saltando: ejecutando como root o sin usuario no-root para agregar a libvirt/kvm.")
+		fmt.Println("ℹ️  Skipping: running as root or no non-root user to add to libvirt/kvm.")
 		return nil
 	}
 
 	_ = a.runner.RunShell("getent group libvirt >/dev/null 2>&1 && sudo usermod -aG libvirt " + u)
 	_ = a.runner.RunShell("getent group kvm >/dev/null 2>&1 && sudo usermod -aG kvm " + u)
 
-	fmt.Printf("✅ Usuario '%s' agregado a los grupos 'libvirt' y 'kvm'.\n", u)
+	fmt.Printf("✅ User '%s' added to the 'libvirt' and 'kvm' groups.\n", u)
 	return nil
 }
 
 func (a *Adapter) configureNetwork() error {
-	fmt.Println("🌐 Configurando red virtual por defecto de libvirt (virbr0)...")
+	fmt.Println("🌐 Configuring the default libvirt virtual network (virbr0)...")
 
 	_ = a.runner.RunShell("sudo virsh net-autostart default 2>/dev/null || true")
 	_ = a.runner.RunShell("sudo virsh net-start default 2>/dev/null || true")
 
 	out, err := a.runner.Output("sudo", "virsh", "net-info", "default")
 	if err == nil && strings.Contains(string(out), "Active:         yes") {
-		fmt.Println("✅ Red virtual 'default' activa y configurada para autoarranque.")
+		fmt.Println("✅ Virtual network 'default' is active and set to autostart.")
 		return nil
 	}
 
@@ -106,7 +106,7 @@ func (a *Adapter) configureNetwork() error {
 		_ = a.runner.RunShell(fmt.Sprintf("sudo virsh net-define %s && sudo virsh net-autostart default && sudo virsh net-start default", tmpFile))
 	}
 
-	fmt.Println("✅ Red virtual de libvirt configurada.")
+	fmt.Println("✅ libvirt virtual network configured.")
 	return nil
 }
 

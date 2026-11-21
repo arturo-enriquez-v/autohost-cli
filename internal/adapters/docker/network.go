@@ -7,7 +7,7 @@ import "fmt"
 
 func (a *Adapter) createDockerNetwork() error {
 	if err := a.runner.Run("sudo", "docker", "network", "inspect", "autohost_net"); err == nil {
-		fmt.Println("✅ La red 'autohost_net' ya existe.")
+		fmt.Println("✅ Network 'autohost_net' already exists.")
 		return nil
 	}
 	return a.runner.Run("sudo", "docker", "network", "create", "autohost_net")

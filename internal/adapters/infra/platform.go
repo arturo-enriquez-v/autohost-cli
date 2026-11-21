@@ -39,7 +39,7 @@ func DetectPlatform() (*Platform, error) {
 // ArchKey para mapear a las claves del TOML (linux_amd64, linux_arm64, linux_arm)
 func (p *Platform) ArchKey() (string, error) {
 	if p.GOOS != "linux" {
-		return "", fmt.Errorf("solo Linux soportado por ahora (Ubuntu y Raspberry Pi OS)")
+		return "", fmt.Errorf("only Linux is supported for now (Ubuntu and Raspberry Pi OS)")
 	}
 	switch p.GOARCH {
 	case "amd64":
@@ -49,7 +49,7 @@ func (p *Platform) ArchKey() (string, error) {
 	case "arm":
 		return "linux_arm", nil
 	default:
-		return "", fmt.Errorf("arquitectura no soportada: %s", p.GOARCH)
+		return "", fmt.Errorf("unsupported architecture: %s", p.GOARCH)
 	}
 }
 

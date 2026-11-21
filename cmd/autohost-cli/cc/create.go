@@ -31,14 +31,14 @@ Credentials are read from /etc/autohost/config.yaml.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name = strings.TrimSpace(name)
 			if !scriptNameRegexp.MatchString(name) {
-				return fmt.Errorf("nombre inválido: solo se permiten letras, números, guiones y guiones bajos")
+				return fmt.Errorf("invalid name: only letters, numbers, hyphens and underscores are allowed")
 			}
 			return svc.CreateCommand(name, description)
 		},
 	}
 
-	cmd.Flags().StringVar(&name, "name", "", "Nombre del comando (letras, números, guiones)")
-	cmd.Flags().StringVar(&description, "description", "", "Descripción del comando personalizado")
+	cmd.Flags().StringVar(&name, "name", "", "Command name (letters, numbers, hyphens)")
+	cmd.Flags().StringVar(&description, "description", "", "Custom command description")
 	_ = cmd.MarkFlagRequired("name")
 	return cmd
 }
@@ -53,10 +53,10 @@ func newListCmd(svc *apps.CCService) *cobra.Command {
 				return err
 			}
 			if len(paths) == 0 {
-				fmt.Println("No hay comandos personalizados. Usa 'autohost cc create --name <nombre>' para crear uno.")
+				fmt.Println("No custom commands found. Use 'autohost cc create --name <name>' to create one.")
 				return nil
 			}
-			fmt.Println("📋 Comandos personalizados:")
+			fmt.Println("📋 Custom commands:")
 			fmt.Println()
 			for _, p := range paths {
 				name := strings.TrimSuffix(filepath.Base(p), ".sh")

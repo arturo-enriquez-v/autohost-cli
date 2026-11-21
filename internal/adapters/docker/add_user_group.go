@@ -11,7 +11,7 @@ import (
 
 func (a *Adapter) addUserToDockerGroup() error {
 	if runningInContainer() {
-		fmt.Println("⚠️  En contenedor no modifico grupos. Omite este paso.")
+		fmt.Println("⚠️  Running inside a container; skipping group changes.")
 		return nil
 	}
 	current, _ := user.Current()
@@ -23,19 +23,19 @@ func (a *Adapter) addUserToDockerGroup() error {
 		u = current.Username
 	}
 	if u == "" || u == "root" {
-		fmt.Println("ℹ️  Saltando: no hay usuario no-root claro para agregar a 'docker'.")
+		fmt.Println("ℹ️  Skipping: no clear non-root user to add to 'docker'.")
 		return nil
 	}
 
 	// Crea grupo si falta y agrega usuario
 	if err := a.runner.RunShell(`getent group docker >/dev/null 2>&1 || sudo groupadd docker`); err != nil {
-		fmt.Println("⚠️  No pude crear/verificar grupo docker:", err)
+		fmt.Println("⚠️  Could not create/verify the docker group:", err)
 	}
 	if err := a.runner.Run("sudo", "usermod", "-aG", "docker", u); err != nil {
-		fmt.Printf("⚠️  No pude agregar el usuario '%s' al grupo docker: %v\n", u, err)
+		fmt.Printf("⚠️  Could not add user '%s' to the docker group: %v\n", u, err)
 		return err
 	}
-	fmt.Printf("✅ Usuario '%s' agregado al grupo 'docker'. Cierra sesión y vuelve a entrar para aplicar cambios.\n", u)
+	fmt.Printf("✅ User '%s' added to the 'docker' group. Log out and back in to apply the changes.\n", u)
 	return nil
 }
 

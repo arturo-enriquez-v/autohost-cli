@@ -13,7 +13,7 @@ import (
 func GenerateRandomString(length int) string {
 	b := make([]byte, length)
 	if _, err := rand.Read(b); err != nil {
-		fmt.Printf("no se pudo generar random string: %v\n", err)
+		fmt.Printf("could not generate random string: %v\n", err)
 		return ""
 	}
 	encoded := base64.StdEncoding.EncodeToString(b)

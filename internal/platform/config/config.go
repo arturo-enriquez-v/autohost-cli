@@ -77,12 +77,12 @@ func Load() *Config {
 func Save(cfg *Config) error {
 	dir := paths.GetAutohostDir()
 	if err := os.MkdirAll(dir, 0o700); err != nil {
-		return fmt.Errorf("creando directorio de configuración: %w", err)
+		return fmt.Errorf("creating config directory: %w", err)
 	}
 
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
-		return fmt.Errorf("serializando configuración: %w", err)
+		return fmt.Errorf("serializing configuration: %w", err)
 	}
 
 	return os.WriteFile(ConfigFile(), data, 0o600)

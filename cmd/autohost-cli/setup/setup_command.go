@@ -13,13 +13,13 @@ import (
 func SetupCmd(svc *node.SetupService) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "setup <provider>",
-		Short: "Instala y configura providers (docker, tailscale, hypervisor)",
-		Long: `Instala y configura los providers necesarios para el self-hosting.
+		Short: "Install and configure providers (docker, tailscale, hypervisor)",
+		Long: `Installs and configures the providers required for self-hosting.
 
-Providers disponibles:
-  docker      Instala Docker y crea la red compartida
-  tailscale   Instala Tailscale y conecta al tailnet
-  hypervisor  Instala KVM, libvirt y configura la red para hospedar VMs`,
+Available providers:
+  docker      Installs Docker and creates the shared network
+  tailscale   Installs Tailscale and connects to the tailnet
+  hypervisor  Installs KVM and libvirt and configures networking to host VMs`,
 		Example: `  autohost setup docker
   autohost setup tailscale
   autohost setup hypervisor`,
@@ -38,10 +38,10 @@ Providers disponibles:
 func dockerSubCmd(svc *node.SetupService) *cobra.Command {
 	return &cobra.Command{
 		Use:     "docker",
-		Short:   "Instala Docker y configura la red compartida",
+		Short:   "Install Docker and configure the shared network",
 		Example: `  autohost setup docker`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("\n🐳 Configurando Docker...")
+			fmt.Println("\n🐳 Setting up Docker...")
 			if err := svc.SetupDocker(); err != nil {
 				return err
 			}
@@ -53,10 +53,10 @@ func dockerSubCmd(svc *node.SetupService) *cobra.Command {
 func tailscaleSubCmd(svc *node.SetupService) *cobra.Command {
 	return &cobra.Command{
 		Use:     "tailscale",
-		Short:   "Instala Tailscale y conecta al tailnet",
+		Short:   "Install Tailscale and connect to the tailnet",
 		Example: `  autohost setup tailscale`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("\n🔐 Configurando Tailscale...")
+			fmt.Println("\n🔐 Setting up Tailscale...")
 			if err := svc.SetupTailscale(); err != nil {
 				return err
 			}
@@ -69,10 +69,10 @@ func hypervisorSubCmd(svc *node.SetupService) *cobra.Command {
 	return &cobra.Command{
 		Use:     "hypervisor",
 		Aliases: []string{"kvm", "vms"},
-		Short:   "Instala y configura KVM + libvirt para hospedar máquinas virtuales",
+		Short:   "Install and configure KVM + libvirt to host virtual machines",
 		Example: `  autohost setup hypervisor`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			fmt.Println("\n🖥️  Configurando Hypervisor (KVM + libvirt)...")
+			fmt.Println("\n🖥️  Setting up Hypervisor (KVM + libvirt)...")
 			if err := svc.SetupHypervisor(); err != nil {
 				return err
 			}

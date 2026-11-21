@@ -48,7 +48,7 @@ func UnzipSingleBinary(zipPath, wantName, destDir string) (string, error) {
 		break
 	}
 	if outPath == "" {
-		return "", fmt.Errorf("no se encontró el binario %q dentro del zip", wantName)
+		return "", fmt.Errorf("binary %q not found inside the zip", wantName)
 	}
 	return outPath, nil
 }

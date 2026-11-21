@@ -21,10 +21,10 @@ func (a *Adapter) startApp(app string) error {
 	ymlPath := filepath.Join(paths.GetSubdir("apps"), app, "docker-compose.yml")
 
 	if _, err := os.Stat(ymlPath); os.IsNotExist(err) {
-		return fmt.Errorf("el archivo de configuración no existe: %s", ymlPath)
+		return fmt.Errorf("config file does not exist: %s", ymlPath)
 	}
 
-	fmt.Printf("🔄 Levantando aplicación '%s'...\n", app)
+	fmt.Printf("🔄 Starting application '%s'...\n", app)
 	return a.runner.RunWithDir(filepath.Dir(ymlPath), "docker", "compose", "-f", ymlPath, "up", "-d")
 }
 
@@ -51,9 +51,9 @@ func (a *Adapter) getAppStatus(app string) (string, error) {
 		return "", err
 	}
 	if strings.Contains(string(out), "Up") {
-		return "en ejecución", nil
+		return "running", nil
 	}
-	return "detenida", nil
+	return "stopped", nil
 }
 
 // Standalone backward-compat wrappers

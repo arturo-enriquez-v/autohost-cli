@@ -8,14 +8,14 @@ import (
 )
 
 func (a *Adapter) logout() error {
-	fmt.Println("🔌 Cerrando sesión de Tailscale...")
+	fmt.Println("🔌 Logging out of Tailscale...")
 
 	if err := a.runner.Run("sudo", "tailscale", "logout"); err != nil {
-		fmt.Println("❌ Error al cerrar sesión de Tailscale:", err)
+		fmt.Println("❌ Failed to log out of Tailscale:", err)
 		return err
 	}
 
-	fmt.Println("✅ Sesión cerrada.")
+	fmt.Println("✅ Logged out.")
 	return nil
 }
 

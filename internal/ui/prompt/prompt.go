@@ -45,13 +45,13 @@ func AskOption(message string, options []string) string {
 		for i, opt := range options {
 			fmt.Printf("[%d] %s\n", i+1, opt)
 		}
-		fmt.Print("Elige una opción: ")
+		fmt.Print("Choose an option: ")
 		input, _ := reader.ReadString('\n')
 		input = strings.TrimSpace(input)
 		if i, err := strconv.Atoi(input); err == nil && i >= 1 && i <= len(options) {
 			return options[i-1]
 		}
-		fmt.Println("❌ Opción inválida, intenta de nuevo.")
+		fmt.Println("❌ Invalid option, please try again.")
 	}
 }
 
@@ -59,12 +59,12 @@ func AskOption(message string, options []string) string {
 func ValidPort(portStr string) (int, error) {
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
-		return 0, fmt.Errorf("puerto inválido: %s", portStr)
+		return 0, fmt.Errorf("invalid port: %s", portStr)
 	}
 
 	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
-		return 0, fmt.Errorf("el puerto %d ya está en uso", port)
+		return 0, fmt.Errorf("port %d is already in use", port)
 	}
 	ln.Close()
 

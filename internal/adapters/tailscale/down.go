@@ -8,14 +8,14 @@ import (
 )
 
 func (a *Adapter) down() error {
-	fmt.Println("🔌 Desconectando interfaz VPN (tailscale down)...")
+	fmt.Println("🔌 Bringing down the VPN interface (tailscale down)...")
 
 	if err := a.runner.Run("sudo", "tailscale", "down"); err != nil {
-		fmt.Println("❌ Error al desconectar VPN:", err)
+		fmt.Println("❌ Failed to disconnect the VPN:", err)
 		return err
 	}
 
-	fmt.Println("✅ VPN desconectada temporalmente (credenciales conservadas).")
+	fmt.Println("✅ VPN temporarily disconnected (credentials kept).")
 	return nil
 }
 

@@ -16,25 +16,25 @@ type AppService struct {
 
 func (s *AppService) StartApp(name string) error {
 	if err := s.Docker.StartApp(name); err != nil {
-		return fmt.Errorf("error al iniciar %s: %w", name, err)
+		return fmt.Errorf("error starting %s: %w", name, err)
 	}
 	return nil
 }
 
 func (s *AppService) StopApp(name string) error {
 	if err := s.Docker.StopApp(name); err != nil {
-		return fmt.Errorf("error al detener %s: %w", name, err)
+		return fmt.Errorf("error stopping %s: %w", name, err)
 	}
 	return nil
 }
 
 func (s *AppService) RemoveApp(ctx context.Context, name AppName) error {
 	if err := s.Docker.RemoveApp(name); err != nil {
-		return fmt.Errorf("error al eliminar el contenedor: %w", err)
+		return fmt.Errorf("error removing the container: %w", err)
 	}
 
 	if err := s.Installed.Remove(ctx, name); err != nil {
-		return fmt.Errorf("error al eliminar de la base de datos: %w", err)
+		return fmt.Errorf("error removing from the database: %w", err)
 	}
 
 	return nil

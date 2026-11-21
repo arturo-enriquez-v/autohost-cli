@@ -9,7 +9,7 @@ import (
 )
 
 func (a *Adapter) install() error {
-	fmt.Println("🔐 Instalando Tailscale...")
+	fmt.Println("🔐 Installing Tailscale...")
 	scriptURL := providers.Get().Tailscale.InstallScriptURL
 	cmd := fmt.Sprintf("curl -fsSL %s | sh", scriptURL)
 	if err := a.runner.RunShell(cmd); err != nil {

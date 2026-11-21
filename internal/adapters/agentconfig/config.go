@@ -43,7 +43,7 @@ func Load() (*AgentConfig, error) {
 		if out, sudoErr := exec.Command("sudo", "cat", configPath).Output(); sudoErr == nil && len(out) > 0 {
 			content = out
 		} else {
-			return nil, fmt.Errorf("no se pudo leer %s: %w", configPath, err)
+			return nil, fmt.Errorf("could not read %s: %w", configPath, err)
 		}
 	}
 	var raw struct {
@@ -51,7 +51,7 @@ func Load() (*AgentConfig, error) {
 		AgentToken string `yaml:"agent_token"`
 	}
 	if err := yaml.Unmarshal(content, &raw); err != nil {
-		return nil, fmt.Errorf("config inválido: %w", err)
+		return nil, fmt.Errorf("invalid config: %w", err)
 	}
 	return &AgentConfig{ApiURL: raw.APIURL, ApiToken: raw.AgentToken}, nil
 }
@@ -60,18 +60,18 @@ func Load() (*AgentConfig, error) {
 // all other content. Uses sudo when the process is not running as root.
 func Save(cfg AgentConfig) error {
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		return fmt.Errorf("archivo de configuración no existe: %s. Por favor, ejecuta 'autohost agent install' primero", configPath)
+		return fmt.Errorf("config file does not exist: %s. Please run 'autohost agent install' first", configPath)
 	}
 
 	content, err := os.ReadFile(configPath)
 	if err != nil {
 		if !os.IsPermission(err) {
-			return fmt.Errorf("error leyendo configuración: %w", err)
+			return fmt.Errorf("error reading configuration: %w", err)
 		}
 		// File is owned by root — read it via sudo.
 		out, sudoErr := exec.Command("sudo", "cat", configPath).Output()
 		if sudoErr != nil {
-			return fmt.Errorf("error leyendo configuración: %w", err)
+			return fmt.Errorf("error reading configuration: %w", err)
 		}
 		content = out
 	}
@@ -120,7 +120,7 @@ func Save(cfg AgentConfig) error {
 	// Persist mTLS certificates if issued during enrollment.
 	if cfg.CACert != "" && cfg.ClientCert != "" && cfg.ClientKey != "" {
 		if err := saveMTLSCerts(cfg.CACert, cfg.ClientCert, cfg.ClientKey); err != nil {
-			return fmt.Errorf("error guardando certificados mTLS: %w", err)
+			return fmt.Errorf("error saving mTLS certificates: %w", err)
 		}
 		updated = setOrReplaceYAMLKey(updated, "grpc_insecure", "false")
 		updated = setOrReplaceYAMLKey(updated, "grpc_ca_cert", fmt.Sprintf("%q", caCertPath))
@@ -135,12 +135,12 @@ func Save(cfg AgentConfig) error {
 	// Write to a temp file first, then copy with sudo.
 	tmp, err := os.CreateTemp("", "autohost-config-*.yaml")
 	if err != nil {
-		return fmt.Errorf("error creando archivo temporal: %w", err)
+		return fmt.Errorf("error creating temp file: %w", err)
 	}
 	defer os.Remove(tmp.Name())
 
 	if err := os.WriteFile(tmp.Name(), []byte(updated), 0600); err != nil {
-		return fmt.Errorf("error escribiendo archivo temporal: %w", err)
+		return fmt.Errorf("error writing temp file: %w", err)
 	}
 	tmp.Close()
 
@@ -148,7 +148,7 @@ func Save(cfg AgentConfig) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("error copiando archivo con sudo: %w", err)
+		return fmt.Errorf("error copying file with sudo: %w", err)
 	}
 	return nil
 }

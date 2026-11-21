@@ -18,12 +18,12 @@ func newLinkCmd(svc *node.EnrollService) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "link",
-		Short: "Enlaza este nodo con la API de AutoHost",
+		Short: "Link this node to the AutoHost API",
 		Example: `  autohost enroll link --token <user-token>
-  autohost enroll link --api https://api.autohost.dev --token <user-token> --name mi-servidor`,
+  autohost enroll link --api https://api.autohost.dev --token <user-token> --name my-server`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if token == "" {
-				return errors.New("--token es obligatorio")
+				return errors.New("--token is required")
 			}
 			if api == "" {
 				api = cfg.APIURL
@@ -32,9 +32,9 @@ func newLinkCmd(svc *node.EnrollService) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVar(&api, "api", cfg.APIURL, "URL base del API (env: AUTOHOST_API_URL o config.yaml)")
-	cmd.Flags().StringVar(&token, "token", "", "Token de sesión de usuario")
-	cmd.Flags().StringVar(&name, "name", "", "Nombre lógico del nodo (por defecto: hostname)")
+	cmd.Flags().StringVar(&api, "api", cfg.APIURL, "API base URL (env: AUTOHOST_API_URL or config.yaml)")
+	cmd.Flags().StringVar(&token, "token", "", "User session token")
+	cmd.Flags().StringVar(&name, "name", "", "Logical node name (default: hostname)")
 
 	_ = cmd.MarkFlagRequired("token")
 	return cmd

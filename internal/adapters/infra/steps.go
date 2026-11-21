@@ -5,12 +5,12 @@ package infra
 
 import "fmt"
 
-// RunStep imprime estado y envuelve el error con contexto uniforme
-func RunStep(nombre string, fn func() error) error {
-	fmt.Printf("🔄 %s...\n", nombre)
+// RunStep prints progress and wraps the error with consistent context
+func RunStep(name string, fn func() error) error {
+	fmt.Printf("🔄 %s...\n", name)
 	if err := fn(); err != nil {
-		return fmt.Errorf("❌ %s: %w", nombre, err)
+		return fmt.Errorf("❌ %s: %w", name, err)
 	}
-	fmt.Printf("✅ %s completado.\n", nombre)
+	fmt.Printf("✅ %s: done.\n", name)
 	return nil
 }

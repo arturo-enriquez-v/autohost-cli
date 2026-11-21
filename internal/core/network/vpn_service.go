@@ -19,9 +19,9 @@ type VPNService struct {
 
 func (s *VPNService) Connect(loginServer, authKey string) error {
 	if !s.Tailscale.Installed() {
-		fmt.Println("⚠️ Tailscale no está instalado. Intentando instalar...")
+		fmt.Println("⚠️ Tailscale is not installed. Attempting to install...")
 		if err := s.Tailscale.Install(); err != nil {
-			return fmt.Errorf("error al instalar Tailscale: %w", err)
+			return fmt.Errorf("error installing Tailscale: %w", err)
 		}
 	}
 
@@ -32,7 +32,7 @@ func (s *VPNService) Connect(loginServer, authKey string) error {
 	ip, err := s.Tailscale.IP()
 	if err == nil && ip != "" {
 		fmt.Println()
-		fmt.Printf("📌 IP Privada Tailscale asignada: %s\n", ip)
+		fmt.Printf("📌 Tailscale private IP assigned: %s\n", ip)
 		s.notifyVPNStatus(ip)
 	}
 
@@ -41,7 +41,7 @@ func (s *VPNService) Connect(loginServer, authKey string) error {
 
 func (s *VPNService) Disconnect() error {
 	if !s.Tailscale.Installed() {
-		return fmt.Errorf("Tailscale no está instalado")
+		return fmt.Errorf("Tailscale is not installed")
 	}
 	if err := s.Tailscale.Down(); err != nil {
 		return err
@@ -52,7 +52,7 @@ func (s *VPNService) Disconnect() error {
 
 func (s *VPNService) Logout() error {
 	if !s.Tailscale.Installed() {
-		return fmt.Errorf("Tailscale no está instalado")
+		return fmt.Errorf("Tailscale is not installed")
 	}
 	if err := s.Tailscale.Logout(); err != nil {
 		return err
@@ -64,11 +64,11 @@ func (s *VPNService) Logout() error {
 func (s *VPNService) notifyVPNStatus(ipVPN string) {
 	cfg, err := agentconfig.Load()
 	if err != nil {
-		fmt.Printf("⚠️ No se pudo cargar /etc/autohost/config.yaml: %v\n", err)
+		fmt.Printf("⚠️ Could not load /etc/autohost/config.yaml: %v\n", err)
 		return
 	}
 	if cfg.ApiURL == "" || cfg.ApiToken == "" {
-		fmt.Println("⚠️ Configuración del agente sin token o URL de API.")
+		fmt.Println("⚠️ Agent configuration is missing the token or API URL.")
 		return
 	}
 
@@ -78,7 +78,7 @@ func (s *VPNService) notifyVPNStatus(ipVPN string) {
 	reqURL := fmt.Sprintf("%s/v1/vpn/status", strings.TrimRight(cfg.ApiURL, "/"))
 	req, err := http.NewRequest(http.MethodPost, reqURL, bytes.NewBuffer(body))
 	if err != nil {
-		fmt.Printf("⚠️ Error al construir petición de estado VPN: %v\n", err)
+		fmt.Printf("⚠️ Failed to build VPN status request: %v\n", err)
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
@@ -87,19 +87,19 @@ func (s *VPNService) notifyVPNStatus(ipVPN string) {
 	client := &http.Client{Timeout: 5 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Printf("⚠️ Error de conexión al notificar la IP VPN a %s: %v\n", reqURL, err)
+		fmt.Printf("⚠️ Connection error while reporting the VPN IP to %s: %v\n", reqURL, err)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
 		if ipVPN != "" {
-			fmt.Printf("✅ IP Privada (%s) registrada exitosamente en Autohost.\n", ipVPN)
+			fmt.Printf("✅ Private IP (%s) registered successfully with AutoHost.\n", ipVPN)
 		} else {
-			fmt.Println("✅ IP Privada desregistrada de Autohost.")
+			fmt.Println("✅ Private IP unregistered from AutoHost.")
 		}
 	} else {
-		fmt.Printf("⚠️ Error de la API (%d) al registrar la IP VPN en Autohost.\n", resp.StatusCode)
+		fmt.Printf("⚠️ API error (%d) while registering the VPN IP with AutoHost.\n", resp.StatusCode)
 	}
 }
 

@@ -13,16 +13,16 @@ import (
 
 func appRemoveCmd(svc *apps.AppService) *cobra.Command {
 	return &cobra.Command{
-		Use:   "remove [nombre]",
-		Short: "Elimina una aplicación",
+		Use:   "remove [name]",
+		Short: "Remove an application",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			appName := args[0]
-			if prompt.Confirm(fmt.Sprintf("¿Estás seguro que quieres eliminar %s? [y/N]: ", appName)) {
+			if prompt.Confirm(fmt.Sprintf("Are you sure you want to remove %s? [y/N]: ", appName)) {
 				if err := svc.RemoveApp(cmd.Context(), apps.AppName(appName)); err != nil {
-					fmt.Printf("❌ No se pudo eliminar %s: %v\n", appName, err)
+					fmt.Printf("❌ Could not remove %s: %v\n", appName, err)
 				} else {
-					fmt.Printf("🧹 %s eliminada correctamente.\n", appName)
+					fmt.Printf("🧹 %s removed successfully.\n", appName)
 				}
 			}
 			return nil

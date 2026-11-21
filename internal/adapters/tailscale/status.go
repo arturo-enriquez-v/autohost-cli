@@ -12,17 +12,17 @@ import (
 func (a *Adapter) getMachineName() (string, error) {
 	out, err := a.runner.Output("tailscale", "status", "--json")
 	if err != nil {
-		return "", fmt.Errorf("error ejecutando tailscale status: %w", err)
+		return "", fmt.Errorf("error running tailscale status: %w", err)
 	}
 
 	var st statusJSON
 	if err := json.Unmarshal(out, &st); err != nil {
-		return "", fmt.Errorf("error parseando JSON: %w", err)
+		return "", fmt.Errorf("error parsing JSON: %w", err)
 	}
 
 	name := strings.TrimSpace(st.Self.HostName)
 	if name == "" {
-		return "", fmt.Errorf("no se encontró HostName en status")
+		return "", fmt.Errorf("HostName not found in status")
 	}
 	return name, nil
 }

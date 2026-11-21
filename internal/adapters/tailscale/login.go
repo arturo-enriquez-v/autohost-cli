@@ -20,10 +20,10 @@ func (a *Adapter) loginHeadscale(loginServer, authKey string) error {
 
 	args := []string{"tailscale", "up"}
 	if loginServer != "" {
-		fmt.Printf("🔐 Autenticando con Tailscale/Headscale (%s)...\n", loginServer)
+		fmt.Printf("🔐 Authenticating with Tailscale/Headscale (%s)...\n", loginServer)
 		args = append(args, "--login-server", loginServer)
 	} else {
-		fmt.Println("🔐 Autenticando con Tailscale...")
+		fmt.Println("🔐 Authenticating with Tailscale...")
 	}
 	if authKey != "" {
 		args = append(args, "--authkey", authKey)
@@ -31,11 +31,11 @@ func (a *Adapter) loginHeadscale(loginServer, authKey string) error {
 
 	cmdArgs := append([]string{"sudo"}, args...)
 	if err := a.runner.Run(cmdArgs[0], cmdArgs[1:]...); err != nil {
-		fmt.Println("❌ Error al autenticar con Tailscale:", err)
+		fmt.Println("❌ Failed to authenticate with Tailscale:", err)
 		return err
 	}
 
-	fmt.Println("✅ Autenticado exitosamente con Tailscale.")
+	fmt.Println("✅ Successfully authenticated with Tailscale.")
 	return nil
 }
 

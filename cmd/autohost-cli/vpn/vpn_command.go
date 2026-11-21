@@ -20,43 +20,43 @@ func VPNCmd(svc *network.VPNService) *cobra.Command {
 
 	vpnCmd := &cobra.Command{
 		Use:   "vpn",
-		Short: "Administrar conexión a la red privada VPN con Tailscale",
-		Long:  `Permite conectar, desconectar o cerrar sesión en la red privada VPN administrada por Tailscale (por defecto) o Headscale.`,
+		Short: "Manage the private VPN connection with Tailscale",
+		Long:  `Connect to, disconnect from or log out of the private VPN network managed by Tailscale (default) or Headscale.`,
 	}
 
 	connectCmd := &cobra.Command{
 		Use:     "connect",
 		Aliases: []string{"up"},
-		Short:   "Conectar con Tailscale (por defecto) usando login interactivo o --authkey",
-		Example: `  # Conectar con Tailscale (interactivo):
+		Short:   "Connect with Tailscale (default) using interactive login or --authkey",
+		Example: `  # Connect with Tailscale (interactive):
   autohost vpn connect
 
-  # Conectar con Tailscale especificando una auth key:
+  # Connect with Tailscale using an auth key:
   autohost vpn connect --authkey <KEY>
 
-  # Conectar con un servidor Headscale personalizado:
+  # Connect to a custom Headscale server:
   autohost vpn connect --login-server https://hs.autohst.dev --authkey <KEY>`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := svc.Connect(loginServer, authKey); err != nil {
-				fmt.Printf("❌ Error al conectar a la VPN: %v\n", err)
+				fmt.Printf("❌ Failed to connect to the VPN: %v\n", err)
 				os.Exit(1)
 			}
 		},
 	}
 
-	connectCmd.Flags().StringVar(&loginServer, "login-server", cfg.VPNServer, "URL de servidor de control personalizado (opcional, por defecto usa Tailscale)")
-	connectCmd.Flags().StringVar(&authKey, "authkey", "", "Auth key de Tailscale (opcional) o pre-auth key de Headscale")
+	connectCmd.Flags().StringVar(&loginServer, "login-server", cfg.VPNServer, "Custom control server URL (optional, defaults to Tailscale)")
+	connectCmd.Flags().StringVar(&authKey, "authkey", "", "Tailscale auth key (optional) or Headscale pre-auth key")
 
 	disconnectCmd := &cobra.Command{
 		Use:     "disconnect",
 		Aliases: []string{"down"},
-		Short:   "Desconectar temporalmente la red VPN (sin borrar credenciales)",
-		Long:    `Apaga la interfaz de red virtual. El nodo se desconecta de la red privada, pero puede reconectarse luego sin ingresar una nueva clave.`,
+		Short:   "Temporarily disconnect from the VPN (keeps credentials)",
+		Long:    `Brings down the virtual network interface. The node leaves the private network but can reconnect later without entering a new key.`,
 		Example: `  autohost vpn disconnect
   autohost vpn down`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := svc.Disconnect(); err != nil {
-				fmt.Printf("❌ Error al desconectar la VPN: %v\n", err)
+				fmt.Printf("❌ Failed to disconnect from the VPN: %v\n", err)
 				os.Exit(1)
 			}
 		},
@@ -64,12 +64,12 @@ func VPNCmd(svc *network.VPNService) *cobra.Command {
 
 	logoutCmd := &cobra.Command{
 		Use:   "logout",
-		Short: "Cerrar sesión y desautenticar el nodo (borra credenciales)",
-		Long:  `Desconecta el nodo de la red privada y borra las credenciales guardadas en la máquina.`,
+		Short: "Log out and deauthenticate the node (deletes credentials)",
+		Long:  `Disconnects the node from the private network and deletes the credentials stored on the machine.`,
 		Example: `  autohost vpn logout`,
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := svc.Logout(); err != nil {
-				fmt.Printf("❌ Error al cerrar sesión de la VPN: %v\n", err)
+				fmt.Printf("❌ Failed to log out of the VPN: %v\n", err)
 				os.Exit(1)
 			}
 		},

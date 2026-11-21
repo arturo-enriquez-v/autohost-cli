@@ -2,28 +2,28 @@
 
 # AutoHost CLI
 
-CLI para automatizar el self-hosting en Linux: instala aplicaciones, gestiona el agente, y conecta nodos con la [autohost-cloud-api](../autohost-cloud-api).
+CLI to automate self-hosting on Linux: install applications, manage the agent, and connect nodes to the [autohost-cloud-api](../autohost-cloud-api).
 
 ## Stack
 
 - **Go** 1.23.0
-- **Cobra** (comandos CLI)
-- **SQLite** (estado local via modernc/sqlite)
-- **Docker** (backend de apps)
-- **Caddy / CoreDNS / Tailscale / Cloudflare Tunnel** (exposición de servicios)
+- **Cobra** (CLI commands)
+- **SQLite** (local state via modernc/sqlite)
+- **Docker** (app backend)
+- **Caddy / CoreDNS / Tailscale / Cloudflare Tunnel** (service exposure)
 
-## Requisitos previos
+## Prerequisites
 
-- Linux (amd64 o arm64)
-- Go 1.23+ (solo para compilar desde fuente)
-- Docker instalado y en ejecución
-- `sudo` o permisos de root para operaciones de sistema
+- Linux (amd64 or arm64)
+- Go 1.23+ (only to build from source)
+- Docker installed and running
+- `sudo` or root privileges for system operations
 
 ---
 
-## Instalación
+## Installation
 
-### Desde GitHub Releases (recomendado)
+### From GitHub Releases (recommended)
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/mazapanuwu13/autohost-cli/main/scripts/install.sh | bash
@@ -57,10 +57,14 @@ autohost --version
 ### Example workflow
 
 ```bash
-export PATH="$PATH:$HOME/.local/bin"   # añadir también a ~/.bashrc
+export PATH="$PATH:$HOME/.local/bin"   # also add this to ~/.bashrc
+
+autohost setup docker      # install Docker and create the shared network
+autohost agent install     # install the agent as a systemd service
+autohost up                # authorize this node in the browser and connect it to the cloud
 ```
 
-### Compilar desde fuente
+### Build from source
 
 ```bash
 git clone https://github.com/mazapanuwu13/autohost-cli.git
@@ -70,15 +74,16 @@ go build -o autohost main.go
 
 ---
 
-## Comandos disponibles
+## Available commands
 
-### `autohost agent` — Gestión del agente
+### `autohost agent` — Agent management
 
 ```bash
-autohost agent install   # Descarga e instala el autohost-agent como servicio systemd
+autohost agent install   # Download and install autohost-agent as a systemd service
+autohost agent update    # Update the agent to the latest version and restart it
 ```
 
-Tras la instalación, edita `/etc/autohost/config.yaml` y arranca el servicio:
+After installing, edit `/etc/autohost/config.yaml` and start the service:
 
 ```bash
 sudo nano /etc/autohost/config.yaml
@@ -86,86 +91,86 @@ sudo systemctl enable autohost-agent
 sudo systemctl start autohost-agent
 ```
 
-### `autohost enroll` — Enrollment de nodos
+### `autohost enroll` — Node enrollment
 
 ```bash
-autohost enroll link --token <ENROLLMENT_TOKEN> [--api <URL_API>] [--name <nombre>]
+autohost enroll link --token <ENROLLMENT_TOKEN> [--api <API_URL>] [--name <name>]
 ```
 
-Enlaza el nodo actual con la cloud API. El comando:
-1. Auto-detecta hostname, IP local, OS y arquitectura
-2. Llama a `POST /v1/enrollments/enroll` con el token de enrollment (usa la API configurada por defecto o la especificada en `--api`)
-3. Guarda el `agent_token` resultante en `/etc/autohost/config.yaml`
+Links the current node to the cloud API. The command:
+1. Auto-detects hostname, local IP, OS and architecture
+2. Calls `POST /v1/enrollments/enroll` with the enrollment token (uses the configured default API or the one given with `--api`)
+3. Saves the resulting `agent_token` to `/etc/autohost/config.yaml`
 
-### `autohost config` — Configuración del CLI
+### `autohost config` — CLI configuration
 
-Permite consultar y cambiar la configuración del CLI persistida en `~/.autohost/config.yaml`.
+View and change the CLI configuration persisted in `~/.autohost/config.yaml`.
 
 ```bash
-# Ver configuración activa
+# Show the active configuration
 autohost config view
 
-# Cambiar URLs por defecto
+# Change the default URLs
 autohost config set api_url http://localhost:8080
 autohost config set cloud_url http://localhost:3000
 autohost config set vpn_server https://hs.autohst.dev
 
-# Obtener un valor
+# Get a single value
 autohost config get api_url
 ```
 
-#### Precedencia de configuración:
-1. **Flags CLI** (`--api`, `--cloud`, `--login-server`)
-2. **Variables de entorno** (`AUTOHOST_API_URL`, `AUTOHOST_CLOUD_URL`, `AUTOHOST_VPN_SERVER`)
-3. **Archivo de configuración** (`~/.autohost/config.yaml`)
-4. **Valores por defecto** (`https://api.autohst.dev`, `https://cloud.autohst.dev`, `https://hs.autohst.dev`)
+#### Configuration precedence:
+1. **CLI flags** (`--api`, `--cloud`, `--login-server`)
+2. **Environment variables** (`AUTOHOST_API_URL`, `AUTOHOST_CLOUD_URL`, `AUTOHOST_VPN_SERVER`)
+3. **Config file** (`~/.autohost/config.yaml`)
+4. **Defaults** (`https://api.autohst.dev`, `https://cloud.autohst.dev`, `https://hs.autohst.dev`)
 
-### Personalización de Proveedores (`providers.yaml`)
+### Customizing providers (`providers.yaml`)
 
-Las recetas y URLs para instalar dependencias (`docker`, `tailscale`, `hypervisor`, `agent`) vienen embebidas en el binario por defecto (`providers.yaml`). Si necesitas personalizar scripts, repositorios o paquetes para un entorno particular o air-gapped, puedes crear un archivo de override en `~/.autohost/providers.yaml`.
+The recipes and URLs used to install dependencies (`docker`, `tailscale`, `hypervisor`, `agent`) are embedded in the binary by default (`providers.yaml`). If you need to customize scripts, repositories or packages for a specific or air-gapped environment, you can create an override file at `~/.autohost/providers.yaml`.
 
-Cualquier clave definida en `~/.autohost/providers.yaml` sobreescribe de forma transparente los valores predeterminados sin requerir recompilar el CLI.
+Any key defined in `~/.autohost/providers.yaml` transparently overrides the default values, without rebuilding the CLI.
 
 ---
 
-## Estructura del proyecto
+## Project structure
 
 ```
 .
 ├── cmd/autohost-cli/
-│   ├── root.go           # Punto de entrada CLI, inyección de dependencias y registro de comandos
+│   ├── root.go           # CLI entry point, dependency injection and command registration
 │   ├── agent/            # autohost agent (install, update)
 │   ├── app/              # autohost app (ls, start, stop, status, remove)
-│   ├── cc/               # autohost cc (creación y listado de scripts remotos)
+│   ├── cc/               # autohost cc (create and list remote scripts)
 │   ├── cfg/              # autohost config (view, set, get)
-│   ├── enroll/           # autohost enroll (link de nodo con la API)
+│   ├── enroll/           # autohost enroll (link node with the API)
 │   ├── setup/            # autohost setup (Docker, Tailscale, KVM/QEMU)
-│   ├── up/               # autohost up (conexión interactiva rápida con Cloud)
+│   ├── up/               # autohost up (quick interactive connection to the cloud)
 │   └── vpn/              # autohost vpn (connect, disconnect, logout)
 ├── internal/
-│   ├── core/             # Bounded Contexts (dominio, puertos y servicios)
-│   │   ├── apps/         # Gestión de ciclo de vida de apps y comandos custom (cc)
-│   │   ├── node/         # Gestión de nodos, agente systemd, setup y conexión cloud (up)
-│   │   └── network/      # Conexión, desconexión y reporte de estado VPN (Headscale/Tailscale)
-│   ├── adapters/         # Adaptadores de infraestructura (con Runner inyectable)
-│   │   ├── agentconfig/  # Parseo y actualización de config.yaml del agente
-│   │   ├── docker/       # Adaptador para Docker daemon y Compose
-│   │   ├── enrollapi/    # Cliente HTTP para el API de enrollment
-│   │   ├── hypervisor/   # Verificación e instalación de virtualización KVM
-│   │   ├── infra/        # Detección de plataforma, SO, red y pasos interactivos
-│   │   ├── installed/    # Persistencia en filesystem de apps instaladas (JSON store)
-│   │   └── tailscale/    # Adaptador para gestión de Tailscale/Headscale
-│   ├── platform/         # Infraestructura base y utilidades de bajo nivel
-│   │   ├── config/       # Configuración del CLI (~/.autohost/config.yaml, env vars y defaults)
-│   │   ├── env/          # Reemplazo de variables de entorno y placeholders
-│   │   ├── exec/         # Abstracción y ejecución de comandos de sistema (Runner)
-│   │   ├── fs/           # Helpers de filesystem y copia de templates
-│   │   ├── paths/        # Gestión de rutas del sistema (~/.autohost)
-│   │   └── providers/    # Recetas centralizadas de instalación y URLs de providers (Docker, Tailscale, KVM, Agent)
-│   ├── security/         # Generación segura de claves criptográficas y secretos
-│   └── ui/               # Presentación en terminal (prompts interactivos y validaciones)
+│   ├── core/             # Bounded contexts (domain, ports and services)
+│   │   ├── apps/         # App lifecycle and custom commands (cc)
+│   │   ├── node/         # Nodes, systemd agent, setup and cloud connection (up)
+│   │   └── network/      # VPN connect, disconnect and status reporting (Headscale/Tailscale)
+│   ├── adapters/         # Infrastructure adapters (with injectable Runner)
+│   │   ├── agentconfig/  # Parsing and updating the agent's config.yaml
+│   │   ├── docker/       # Docker daemon and Compose adapter
+│   │   ├── enrollapi/    # HTTP client for the enrollment API
+│   │   ├── hypervisor/   # KVM virtualization checks and installation
+│   │   ├── infra/        # Platform, OS and network detection, interactive steps
+│   │   ├── installed/    # Filesystem persistence of installed apps (JSON store)
+│   │   └── tailscale/    # Tailscale/Headscale management adapter
+│   ├── platform/         # Base infrastructure and low-level utilities
+│   │   ├── config/       # CLI configuration (~/.autohost/config.yaml, env vars and defaults)
+│   │   ├── env/          # Environment variable and placeholder substitution
+│   │   ├── exec/         # System command abstraction and execution (Runner)
+│   │   ├── fs/           # Filesystem helpers and template copying
+│   │   ├── paths/        # System path management (~/.autohost)
+│   │   └── providers/    # Centralized install recipes and provider URLs (Docker, Tailscale, KVM, Agent)
+│   ├── security/         # Secure generation of cryptographic keys and secrets
+│   └── ui/               # Terminal presentation (interactive prompts and validation)
 ├── scripts/
-│   ├── install.sh        # Instalador del CLI
+│   ├── install.sh        # CLI installer
 │   ├── autohost-multipass.sh
 │   └── autohost-incus.sh
 ├── Makefile
@@ -174,35 +179,35 @@ Cualquier clave definida en `~/.autohost/providers.yaml` sobreescribe de forma t
 
 ---
 
-## Comandos Make (entornos de prueba)
+## Make commands (test environments)
 
 ```bash
 # Multipass
-make vm-run        # Crea VM de prueba (autohost-test) con Multipass
-make vm-update     # Actualiza el binario en la VM
-make vm-delete     # Elimina la VM
+make vm-run        # Create a test VM (autohost-test) with Multipass
+make vm-update     # Update the binary in the VM
+make vm-delete     # Delete the VM
 
 # Incus
-make incus-run     # Crea instancia de prueba con Incus
-make incus-update  # Actualiza el binario en la instancia
-make incus-delete  # Elimina la instancia
+make incus-run     # Create a test instance with Incus
+make incus-update  # Update the binary in the instance
+make incus-delete  # Delete the instance
 ```
 
 ---
 
-## Convenciones de código
+## Code conventions
 
-- Go 1.23.0, `gofmt` / `goimports` obligatorio
-- Errores envueltos con contexto: `fmt.Errorf("contexto: %w", err)`
-- Comandos idempotentes: crear si no existe, actualizar si cambió, no duplicar
-- Sin secretos en logs ni mensajes de error
-- Detectar root con `os.Geteuid() == 0`; usar `sudo` como fallback si está disponible
+- Go 1.23.0, `gofmt` / `goimports` required
+- Wrap errors with context: `fmt.Errorf("context: %w", err)`
+- Idempotent commands: create if missing, update if changed, never duplicate
+- No secrets in logs or error messages
+- Detect root with `os.Geteuid() == 0`; fall back to `sudo` when available
 
 
-## Licencia / License
+## License
 
-Este proyecto es software libre y de código abierto (Open Source), distribuido bajo la licencia **[GNU Affero General Public License v3.0 (AGPLv3)](LICENSE)**.
+This project is free and open-source software, distributed under the **[GNU Affero General Public License v3.0 (AGPLv3)](LICENSE)**.
 
-Eres libre de usarlo, modificarlo y hospedar tu propia instancia (self-hosted) de forma gratuita. De acuerdo con los términos de AGPLv3, si modificas el software y ofreces servicios a través de una red, debes poner a disposición el código fuente correspondiente bajo la misma licencia.
+You are free to use it, modify it and host your own (self-hosted) instance at no cost. Under the terms of the AGPLv3, if you modify the software and offer it as a service over a network, you must make the corresponding source code available under the same license.
 
-Para licencias comerciales alternativas o consultas sobre la versión SaaS gestionada, contacta al equipo de AutoHost.
+For alternative commercial licensing or questions about the managed SaaS version, contact the AutoHost team.

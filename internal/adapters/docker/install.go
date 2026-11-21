@@ -18,18 +18,18 @@ type osRelease struct {
 
 func (a *Adapter) install() error {
 	if runningInContainer() {
-		fmt.Println("⚠️  Detecté contenedor. No instalo Docker aquí. Usa el socket del host o dind para pruebas.")
+		fmt.Println("⚠️  Running inside a container; skipping Docker installation. Use the host socket or dind for testing.")
 		return nil
 	}
 	if a.DockerInstalled() {
-		fmt.Println("✅ Docker ya está instalado.")
+		fmt.Println("✅ Docker is already installed.")
 		return nil
 	}
-	fmt.Println("🔄 Instalando Docker...")
+	fmt.Println("🔄 Installing Docker...")
 
 	// Asegura curl
 	if err := a.ensureCurl(); err != nil {
-		panic("❌ No pude instalar/ubicar curl: " + err.Error())
+		panic("❌ Could not install or locate curl: " + err.Error())
 	}
 
 	dockerCfg := providers.Get().Docker
@@ -42,7 +42,7 @@ rm -f "$tmp"
 `, dockerCfg.InstallScriptURL)
 
 	if err := a.runner.RunShell(installScript); err != nil {
-		panic("❌ Error ejecutando el instalador de Docker: " + err.Error())
+		panic("❌ Failed to run the Docker installer: " + err.Error())
 	}
 
 	// Arrancar/enable del daemon (si hay systemd)
@@ -54,12 +54,12 @@ rm -f "$tmp"
 
 	// Verificar CLI + daemon
 	if err := a.runner.Run("sudo", "docker", "--version"); err != nil {
-		panic("❌ Docker CLI no quedó instalado correctamente.")
+		panic("❌ Docker CLI was not installed correctly.")
 	}
 	if err := a.runner.Run("sudo", "docker", "info"); err != nil {
-		fmt.Println("⚠️  Docker instalado, pero el daemon no responde aún. Revisa el servicio o reinicia el host.")
+		fmt.Println("⚠️  Docker is installed, but the daemon is not responding yet. Check the service or reboot the host.")
 	} else {
-		fmt.Println("✅ Docker instalado y en ejecución.")
+		fmt.Println("✅ Docker installed and running.")
 	}
 	return nil
 }

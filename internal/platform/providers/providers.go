@@ -49,7 +49,7 @@ func (r HypervisorRecipe) PackageInstallCmd(distroID string) (string, error) {
 			return cmd, nil
 		}
 	}
-	return "", fmt.Errorf("distribución no reconocida (%s). Por favor instala qemu-kvm, libvirt y cloud-image-utils manualmente", distroID)
+	return "", fmt.Errorf("unrecognized distribution (%s). Please install qemu-kvm, libvirt and cloud-image-utils manually", distroID)
 }
 
 type AgentRecipe struct {
@@ -83,7 +83,7 @@ func load() *Providers {
 	p := &Providers{}
 	// 1. Cargar archivo embebido por defecto
 	if err := yaml.Unmarshal(defaultProvidersYAML, p); err != nil {
-		fmt.Printf("⚠️ Error parseando providers.yaml embebido: %v\n", err)
+		fmt.Printf("⚠️ Failed to parse embedded providers.yaml: %v\n", err)
 	}
 
 	// 2. Override opcional si el usuario tiene ~/.autohost/providers.yaml

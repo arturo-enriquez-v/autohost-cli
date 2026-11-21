@@ -28,11 +28,11 @@ func (s *CCService) CreateCommand(name, description string) error {
 	scriptPath := filepath.Join(CCCommandsDir, name+".sh")
 
 	if err := s.ensureCommandsDir(); err != nil {
-		return fmt.Errorf("error creando directorio de comandos: %w", err)
+		return fmt.Errorf("error creating commands directory: %w", err)
 	}
 
 	if _, err := os.Stat(scriptPath); err == nil {
-		return fmt.Errorf("el script '%s.sh' ya existe en %s", name, CCCommandsDir)
+		return fmt.Errorf("script '%s.sh' already exists in %s", name, CCCommandsDir)
 	}
 
 	tmpl := fmt.Sprintf(`#!/usr/bin/env bash
@@ -51,22 +51,22 @@ echo "Running custom command: %s"
 `, name, description, time.Now().Format("2006-01-02 15:04:05"), name)
 
 	if err := s.writeFilePrivileged(scriptPath, []byte(tmpl), 0750); err != nil {
-		return fmt.Errorf("error creando script: %w", err)
+		return fmt.Errorf("error creating script: %w", err)
 	}
-	fmt.Printf("📄 Script creado: %s\n", scriptPath)
+	fmt.Printf("📄 Script created: %s\n", scriptPath)
 
 	cfg, err := agentconfig.Load()
 	if err != nil {
-		return fmt.Errorf("no se pudo leer la configuración: %w", err)
+		return fmt.Errorf("could not read configuration: %w", err)
 	}
 	if cfg.ApiURL == "" {
-		return fmt.Errorf("api_url no encontrada en /etc/autohost/config.yaml")
+		return fmt.Errorf("api_url not found in /etc/autohost/config.yaml")
 	}
 	if cfg.ApiToken == "" {
-		return fmt.Errorf("agent_token no encontrado en /etc/autohost/config.yaml")
+		return fmt.Errorf("agent_token not found in /etc/autohost/config.yaml")
 	}
 
-	fmt.Println("📡 Registrando comando en la API...")
+	fmt.Println("📡 Registering command with the API...")
 	client := enrollapi.NewAgentClient(cfg.ApiURL, cfg.ApiToken)
 	payload := map[string]string{
 		"name":        name,
@@ -79,17 +79,17 @@ echo "Running custom command: %s"
 
 	status, err := client.PostJSON(ctx, "/v1/node-commands", payload, nil)
 	if err != nil {
-		return fmt.Errorf("error registrando comando en la API: %w", err)
+		return fmt.Errorf("error registering command with the API: %w", err)
 	}
 	if status >= 300 {
-		return fmt.Errorf("la API respondió con código %d", status)
+		return fmt.Errorf("API responded with status %d", status)
 	}
 
-	fmt.Println("✅ Comando registrado exitosamente")
+	fmt.Println("✅ Command registered successfully")
 	fmt.Println()
-	fmt.Printf("📝 Edita el script con tu lógica:\n   sudo nano %s\n", scriptPath)
+	fmt.Printf("📝 Edit the script with your logic:\n   sudo nano %s\n", scriptPath)
 	fmt.Println()
-	fmt.Println("El comando estará disponible en el dashboard para ejecutarse remotamente.")
+	fmt.Println("The command will be available in the dashboard to run remotely.")
 	return nil
 }
 
@@ -99,7 +99,7 @@ func (s *CCService) ListCommands() ([]string, error) {
 		if os.IsNotExist(err) {
 			return nil, nil
 		}
-		return nil, fmt.Errorf("error leyendo directorio: %w", err)
+		return nil, fmt.Errorf("error reading directory: %w", err)
 	}
 	var paths []string
 	for _, e := range entries {
@@ -121,7 +121,7 @@ func (s *CCService) ensureCommandsDir() error {
 		return exec.Command("chown", fmt.Sprintf("root:%s", agentGroup), CCCommandsDir).Run()
 	}
 	if _, err := exec.LookPath("sudo"); err != nil {
-		return fmt.Errorf("se requiere sudo para crear %s. Ejecuta como root o instala sudo", CCCommandsDir)
+		return fmt.Errorf("sudo is required to create %s. Run as root or install sudo", CCCommandsDir)
 	}
 	if err := exec.Command("sudo", "mkdir", "-p", CCCommandsDir).Run(); err != nil {
 		return err

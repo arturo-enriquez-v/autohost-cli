@@ -79,8 +79,8 @@ func TestDockerGetAppStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if status != "en ejecución" {
-		t.Fatalf("expected 'en ejecución', got %q", status)
+	if status != "running" {
+		t.Fatalf("expected 'running', got %q", status)
 	}
 
 	mockStopped := &mockRunner{
@@ -93,7 +93,7 @@ func TestDockerGetAppStatus(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if statusStopped != "detenida" {
+	if statusStopped != "stopped" {
 		t.Fatalf("expected 'detenida', got %q", statusStopped)
 	}
 }
