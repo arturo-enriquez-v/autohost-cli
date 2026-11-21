@@ -179,19 +179,18 @@ Any key defined in `~/.autohost/providers.yaml` transparently overrides the defa
 
 ---
 
-## Make commands (test environments)
+## Make commands
 
 ```bash
-# Multipass
-make vm-run        # Create a test VM (autohost-test) with Multipass
-make vm-update     # Update the binary in the VM
-make vm-delete     # Delete the VM
-
-# Incus
-make incus-run     # Create a test instance with Incus
-make incus-update  # Update the binary in the instance
-make incus-delete  # Delete the instance
+make help          # List every target
+make build         # Build ./autohost
+make test          # Run the tests
+make release       # Tag and push a release (CI builds it), e.g. TAG=v1.2.3
 ```
+
+Test environments (Incus test servers, a real node on the LAN) live in `autohost-agent` and can be
+run from here too, e.g. `make lab-create`, `make lab-update` (pushes this CLI and the agent to the
+test servers). See `make -C ../autohost-agent help`.
 
 ---
 
